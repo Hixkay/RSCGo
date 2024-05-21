@@ -2,7 +2,8 @@
 compile() {
 	os=$1
 	arch=$2
-	LINK_FLAGS="-w -s -buildid=rscgo-production -v -extldflags=-static -X main.version=$tag"
+       # LINK_FLAGS="-w -s -buildid=rscgo-production -v -extldflags=-static -X main.version=$tag"
+	LINK_FLAGS="-w -s -buildid=rscgo-production -v -X main.version=$tag"
 	BUILD_FLAGS="-trimpath -smallframes -pack -buildid=rscgo-production -v -complete -nolocalimports -v"
 
 	EXECUTABLE="./bin/game-$os-$arch"
@@ -14,7 +15,8 @@ compile() {
 #		echo 'Position-independent executable files supported on target OS; enabling...'
 #		LINK_FLAGS="-buildmode pie $LINK_FLAGS"
 #	fi
-	CGO_ENABLED=0 CC=gcc GOOS=$os GOARCH=$arch go build -o "$EXECUTABLE" -gcflags="$BUILD_FLAGS" -tags=netgo -ldflags="$LINK_FLAGS -extld=ldd" pkg/server.go	
+	# CGO_ENABLED=0 CC=gcc GOOS=$os GOARCH=$arch go build -o "$EXECUTABLE" -gcflags="$BUILD_FLAGS" -tags=netgo -ldflags="$LINK_FLAGS -extld=ldd" pkg/server.go	
+        CC=gcc GOOS=$os GOARCH=$arch go build -o "$EXECUTABLE" -gcflags="$BUILD_FLAGS" -tags=netgo -ldflags="$LINK_FLAGS" pkg/server.go
 }
 listTargets() {
 	echo "Available targets (os/arch):"

@@ -12,6 +12,7 @@ package world
 import (
 	"bufio"
 	"context"
+	stderr "errors"
 	"fmt"
 	"io"
 	"math"
@@ -39,22 +40,22 @@ type (
 	//Player A player in our game world.
 	Player struct {
 		context.Context
-		LocalPlayers      *MobList
-		LocalNPCs         *MobList
-		LocalObjects      *entityList
-		LocalItems        *entityList
-		FriendList        *social.FriendsList
-		IgnoreList        []uint64
-		Appearance        entity.AppearanceTable
-		KnownAppearances  map[int]int
-		AppearanceReq     []*Player
-		Socket            stdnet.Conn
-		Attributes        *entity.AttributeList
-		Inventory         *Inventory
-		bank              *Inventory
-		TradeOffer        *Inventory
-		DuelOffer         *Inventory
-		Duel              struct {
+		LocalPlayers     *MobList
+		LocalNPCs        *MobList
+		LocalObjects     *entityList
+		LocalItems       *entityList
+		FriendList       *social.FriendsList
+		IgnoreList       []uint64
+		Appearance       entity.AppearanceTable
+		KnownAppearances map[int]int
+		AppearanceReq    []*Player
+		Socket           stdnet.Conn
+		Attributes       *entity.AttributeList
+		Inventory        *Inventory
+		bank             *Inventory
+		TradeOffer       *Inventory
+		DuelOffer        *Inventory
+		Duel             struct {
 			Rules    [4]bool
 			Accepted [2]bool
 			Target   *Player
@@ -65,12 +66,12 @@ type (
 		ReplyMenuC        chan int8
 		killer            sync.Once
 		Cancel            func()
-		inFrame			  bool
+		inFrame           bool
 		hasReader         bool
 		Websocket         bool
 		InQueue, OutQueue chan *net.Packet
 		Reader            *bufio.Reader
-		webFrame 			  ws.Header
+		webFrame          ws.Header
 		Writer            net.WriteFlusher
 		DatabaseIndex     int
 		OpCiphers         [2]*isaac.ISAAC
@@ -126,7 +127,7 @@ func (p *Player) Username() string {
 	return strutil.Base37.Decode(p.VarLong("username", strutil.Base37.Encode("NIL")))
 }
 
-//CurrentIP returns the remote IP address this player connected from
+// CurrentIP returns the remote IP address this player connected from
 func (p *Player) CurrentIP() string {
 	if strings.HasPrefix(p.RemoteAddress(), "[") {
 		return p.RemoteAddress()[1:strings.LastIndex(p.RemoteAddress(), "]:")]
@@ -134,7 +135,7 @@ func (p *Player) CurrentIP() string {
 	return strings.Split(p.RemoteAddress(), ":")[0]
 }
 
-//LocalAddress Returns the remote IP:port that this player connected from, or N/A if this player never connected somehow
+// LocalAddress Returns the remote IP:port that this player connected from, or N/A if this player never connected somehow
 func (p *Player) RemoteAddress() string {
 	if p.Socket == nil {
 		return "N/A:N/A"
@@ -157,15 +158,15 @@ func (p *Player) AppearanceTicket() int {
 	return p.VarInt("appearanceTicket", 0)
 }
 
-//String returns a string populated with the more identifying features of this player.
+// String returns a string populated with the more identifying features of this player.
 func (p *Player) String() string {
 	return fmt.Sprintf("'%s'[%d]@'%s'", p.Username(), p.ServerIndex(), p.CurrentIP())
 }
 
-//SetTickAction queues a distanced action to run every game engine tick before path traversal, if action returns true, it will be reset.
+// SetTickAction queues a distanced action to run every game engine tick before path traversal, if action returns true, it will be reset.
 func (p *Player) SetTickAction(action func() bool) {
 	p.SetVar("tickAction", action)
-	
+
 }
 
 func (p *Player) TickAction() func() bool {
@@ -175,17 +176,17 @@ func (p *Player) TickAction() func() bool {
 	return nil
 }
 
-//ResetTickAction clears the distanced action, if any is queued.  Should be called any time the player is deliberately performing an action.
+// ResetTickAction clears the distanced action, if any is queued.  Should be called any time the player is deliberately performing an action.
 func (p *Player) ResetTickAction() {
 	p.UnsetVar("tickAction")
 }
 
-//FriendsWith returns true if specified username is in our friend entityList.
+// FriendsWith returns true if specified username is in our friend entityList.
 func (p *Player) FriendsWith(other uint64) bool {
 	return p.FriendList.ContainsHash(other)
 }
 
-//Ignoring returns true if specified username is in our ignore entityList.
+// Ignoring returns true if specified username is in our ignore entityList.
 func (p *Player) Ignoring(hash uint64) bool {
 	for _, v := range p.IgnoreList {
 		if v == hash {
@@ -210,22 +211,22 @@ func (p *Player) BoolAttribute(id string) bool {
 	return false
 }
 
-//ChatBlocked returns true if public chat is blocked for this player.
+// ChatBlocked returns true if public chat is blocked for this player.
 func (p *Player) ChatBlocked() bool {
 	return p.BoolAttribute("chat_block")
 }
 
-//FriendBlocked returns true if private chat is blocked for this player.
+// FriendBlocked returns true if private chat is blocked for this player.
 func (p *Player) FriendBlocked() bool {
 	return p.BoolAttribute("friend_block")
 }
 
-//TradeBlocked returns true if trade requests are blocked for this player.
+// TradeBlocked returns true if trade requests are blocked for this player.
 func (p *Player) TradeBlocked() bool {
 	return p.BoolAttribute("trade_block")
 }
 
-//DuelBlocked returns true if duel requests are blocked for this player.
+// DuelBlocked returns true if duel requests are blocked for this player.
 func (p *Player) DuelBlocked() bool {
 	return p.BoolAttribute("duel_block")
 }
@@ -240,7 +241,7 @@ func (p *Player) UpdateStatus(status bool) {
 	})
 }
 
-//WalkingRangedAction Runs `fn` once arriving anywhere within 5 tiles in any direction of `t`,
+// WalkingRangedAction Runs `fn` once arriving anywhere within 5 tiles in any direction of `t`,
 // with a straight line of sight, e.g no intersecting boundaries, large objects, walls, etc.
 // Runs everything on game engine ticks, retries until catastrophic failure or success.
 func (p *Player) WalkingRangedAction(t entity.MobileEntity, fn func()) {
@@ -252,7 +253,7 @@ func (p *Player) WalkingRangedAction(t entity.MobileEntity, fn func()) {
 	p.WalkingArrivalAction(t, 5, fn)
 }
 
-//WalkingArrivalAction Runs `action` once arriving within dist (min 1 max 2 tiles)
+// WalkingArrivalAction Runs `action` once arriving within dist (min 1 max 2 tiles)
 // of `target` mob, with a straight line of sight, e.g no intersecting boundaries, large
 // objects, walls, etc.
 // Runs everything on game engine ticks, retries until catastrophic failure or success.
@@ -291,12 +292,12 @@ func (p *Player) WalkingArrivalAction(t entity.MobileEntity, dist int, action fu
 			// p.SetPath(NewPathway(p.X(), p.Y(), pivotList[0], pivotList[1]))
 			return true
 		}
-		
+
 		return true
 	})
 }
 
-//SetPrivacySettings sets privacy settings to specified values.
+// SetPrivacySettings sets privacy settings to specified values.
 func (p *Player) SetPrivacySettings(chatBlocked, friendBlocked, tradeBlocked, duelBlocked bool) {
 	p.Attributes.SetVar("chat_block", chatBlocked)
 	p.Attributes.SetVar("friend_block", friendBlocked)
@@ -314,59 +315,59 @@ func (p *Player) SetPrivacySettings(chatBlocked, friendBlocked, tradeBlocked, du
 	})
 }
 
-//SetClientSetting sets the specified client setting to flag.
+// SetClientSetting sets the specified client setting to flag.
 func (p *Player) SetClientSetting(id int, flag bool) {
 	// TODO: Meaningful names mapped to IDs
 	p.Attributes.SetVar("client_setting_"+strconv.Itoa(id), flag)
 }
 
-//GetClientSetting looks up the client setting with the specified ID, and returns it.  If it can't be found, returns false.
+// GetClientSetting looks up the client setting with the specified ID, and returns it.  If it can't be found, returns false.
 func (p *Player) GetClientSetting(id int) bool {
 	// TODO: Meaningful names mapped to IDs
 	return p.BoolAttribute("client_setting_" + strconv.Itoa(id))
 }
 
-//ServerSeed returns the seed for the ISAAC cipher provided by the game for this player, if set, otherwise returns 0
+// ServerSeed returns the seed for the ISAAC cipher provided by the game for this player, if set, otherwise returns 0
 func (p *Player) ServerSeed() uint64 {
 	return p.VarLong("server_seed", 0)
 }
 
-//SetServerSeed sets the player's stored game seed to seed for later comparison to ensure we decrypted the login block properly and the player received the proper seed.
+// SetServerSeed sets the player's stored game seed to seed for later comparison to ensure we decrypted the login block properly and the player received the proper seed.
 func (p *Player) SetServerSeed(seed uint64) {
 	p.SetVar("server_seed", seed)
 }
 
-//Reconnecting returns true if the player is reconnecting, false otherwise.
+// Reconnecting returns true if the player is reconnecting, false otherwise.
 func (p *Player) Reconnecting() bool {
 	return p.VarBool("reconnecting", false)
 }
 
-//SetReconnecting sets the player's reconnection status to flag.
+// SetReconnecting sets the player's reconnection status to flag.
 func (p *Player) SetReconnecting(flag bool) {
 	p.SetVar("reconnecting", flag)
 }
 
-//Connected returns true if the player is connected, false otherwise.
+// Connected returns true if the player is connected, false otherwise.
 func (p *Player) Connected() bool {
 	return p.VarBool("connected", false)
 }
 
-//SetConnected sets the player's connected status to flag.
+// SetConnected sets the player's connected status to flag.
 func (p *Player) SetConnected(flag bool) {
 	p.SetVar("connected", flag)
 }
 
-//FirstLogin returns true if this player has never logged in before, otherwise false.
+// FirstLogin returns true if this player has never logged in before, otherwise false.
 func (p *Player) FirstLogin() bool {
 	return p.Attributes.VarBool("first_login", true)
 }
 
-//SetFirstLogin sets the player's persistent logged in before status to flag.
+// SetFirstLogin sets the player's persistent logged in before status to flag.
 func (p *Player) SetFirstLogin(flag bool) {
 	p.Attributes.SetVar("first_login", flag)
 }
 
-//NextTo returns true if we can walk a straight line to target without colliding with any walls or objects,
+// NextTo returns true if we can walk a straight line to target without colliding with any walls or objects,
 // otherwise returns false.
 func (l Location) NextTo(target entity.Location) bool {
 	return !l.Collides(target)
@@ -376,7 +377,7 @@ func (p *Player) NextToCoords(x, y int) bool {
 	return p.NextTo(NewLocation(x, y))
 }
 
-//TraversePath if the mob has a path, calling this method will change the mobs location to the next location described by said Path data structure.  This should be called no more than once per game tick.
+// TraversePath if the mob has a path, calling this method will change the mobs location to the next location described by said Path data structure.  This should be called no more than once per game tick.
 func (p *Player) TraversePath() {
 	path := p.Path()
 	if path == nil {
@@ -386,7 +387,7 @@ func (p *Player) TraversePath() {
 		path.CurrentWaypoint++
 	}
 	dst := p.NextTileToward(path.nextTile())
-	
+
 	if p.FinishedPath() {
 		p.ResetPath()
 		return
@@ -400,13 +401,13 @@ func (p *Player) TraversePath() {
 	p.SetLocation(dst, false)
 }
 
-//Targetable returns true if you are able to see the other location from the receiever location without hitting
+// Targetable returns true if you are able to see the other location from the receiever location without hitting
 // any obstacles, and you are within range.  Otherwise returns false.
 func (l Location) Targetable(other Location) bool {
 	return l.Near(other, 5) && !l.Collides(other)
 }
 
-//WithinReach returns true if you are able to physically touch the other person you are so close without obstacles
+// WithinReach returns true if you are able to physically touch the other person you are so close without obstacles
 // Otherwise returns false.
 func (l Location) WithinReach(other entity.Location) bool {
 	return l.Near(other, 2) && !l.Collides(other)
@@ -426,7 +427,7 @@ func (p *Player) WriteNow(packet net.Packet) {
 	header := []byte{0, 0}
 	frameLength := len(packet.FrameBuffer)
 	if cipher := p.OpCiphers[0]; cipher != nil {
-		packet.FrameBuffer[0] = byte(uint32(packet.FrameBuffer[0]) + cipher.Uint32()) & 0xFF
+		packet.FrameBuffer[0] = byte(uint32(packet.FrameBuffer[0])+cipher.Uint32()) & 0xFF
 	} else {
 		log.Debug("nil isaac thingy")
 	}
@@ -445,12 +446,12 @@ func (p *Player) WriteNow(packet net.Packet) {
 	}
 }
 
-//UpdateRegion if this player is currently in a region, removes it from that region, and adds it to the region at x,y
+// UpdateRegion if this player is currently in a region, removes it from that region, and adds it to the region at x,y
 func (p *Player) UpdateRegion(x, y int) {
 	UpdateRegions(p, x, y)
 }
 
-//DistributeMeleeExp This is a helper method to distribute experience amongst the players melee stats according to
+// DistributeMeleeExp This is a helper method to distribute experience amongst the players melee stats according to
 // its current fight stance.
 //
 // If the player is in controlled stance, each melee skill gets (experience).
@@ -471,7 +472,7 @@ func (p *Player) DistributeMeleeExp(experience float64) {
 	}
 }
 
-//EquipItem equips an item to this player, and sends inventory and equipment bonuses.
+// EquipItem equips an item to this player, and sends inventory and equipment bonuses.
 func (p *Player) EquipItem(item *Item) {
 	reqs := definitions.Items[item.ID].Requirements
 	if reqs != nil {
@@ -546,14 +547,14 @@ func (p *Player) Equips() []int {
 func (p *Player) UpdateAppearance() {
 	p.Inc("appearanceTicket", 1)
 	p.SetAppearanceChanged()
-	p.enqueueArea(playerEvents, p.ViewRadius(), map[string]int {"index": int(p.ServerIndex()), "ticket": int(p.AppearanceTicket())})
+	p.enqueueArea(playerEvents, p.ViewRadius(), map[string]int{"index": int(p.ServerIndex()), "ticket": int(p.AppearanceTicket())})
 }
 
 func (p *Player) ViewRadius() int {
 	return p.VarInt("viewRadius", 16) - 1
 }
 
-//DequipItem removes an item from this players equips, and sends inventory and equipment bonuses.
+// DequipItem removes an item from this players equips, and sends inventory and equipment bonuses.
 func (p *Player) DequipItem(item *Item) {
 	def := definitions.Equip(item.ID)
 	if !item.Worn || def == nil {
@@ -580,7 +581,7 @@ func (p *Player) DequipItem(item *Item) {
 	p.SendInventory()
 }
 
-//ResetAll in order, calls ResetFighting, ResetTrade, ResetTickAction, ResetFollowing, and CloseOptionMenu.
+// ResetAll in order, calls ResetFighting, ResetTrade, ResetTickAction, ResetFollowing, and CloseOptionMenu.
 func (p *Player) ResetAll() {
 	p.ResetFighting()
 	p.ResetDuel()
@@ -603,20 +604,20 @@ func (p *Player) ResetAllExceptDueling() {
 	p.CloseShop()
 }
 
-//Fatigue Returns the players current fatigue.
+// Fatigue Returns the players current fatigue.
 func (p *Player) Fatigue() int {
 	return p.Attributes.VarInt("fatigue", 0)
 }
 
-//SetFatigue Sets the players current fatigue to i.
+// SetFatigue Sets the players current fatigue to i.
 func (p *Player) SetFatigue(i int) {
 	p.Attributes.SetVar("fatigue", i)
 }
 
-//NearbyPlayers Returns nearby players.
+// NearbyPlayers Returns nearby players.
 func (p *Player) NearbyPlayers() (players []*Player) {
 	for _, r := range VisibleRegionsFrom(p) {
-		r.Players.RangePlayers(func(p1 *Player) bool  {
+		r.Players.RangePlayers(func(p1 *Player) bool {
 			if p.Near(p1, p.ViewRadius()) && p1.ServerIndex() != p.ServerIndex() {
 				players = append(players, p1)
 			}
@@ -630,10 +631,10 @@ func (p *Player) NearbyPlayers() (players []*Player) {
 	return
 }
 
-//NearbyNpcs Returns nearby NPCs.
+// NearbyNpcs Returns nearby NPCs.
 func (p *Player) NearbyNpcs() (npcs []*NPC) {
 	for _, r := range VisibleRegionsFrom(p) {
-		r.NPCs.RangeNpcs(func(n *NPC) bool  {
+		r.NPCs.RangeNpcs(func(n *NPC) bool {
 			if p.Near(n, p.ViewRadius()) && !p.VarBool("removed", false) {
 				npcs = append(npcs, n)
 			}
@@ -643,7 +644,7 @@ func (p *Player) NearbyNpcs() (npcs []*NPC) {
 	return npcs
 }
 
-//NearbyObjects Returns nearby objects.
+// NearbyObjects Returns nearby objects.
 func (p *Player) NearbyObjects() (objects []entity.Entity) {
 	for _, r := range VisibleRegionsFrom(p) {
 		objects = append(objects, r.Objects.NearbyObjects(p)...)
@@ -652,27 +653,27 @@ func (p *Player) NearbyObjects() (objects []entity.Entity) {
 	return
 }
 
-//NewObjects Returns nearby objects that this player is unaware of.
+// NewObjects Returns nearby objects that this player is unaware of.
 func (p *Player) NewObjects() (objects []*Object) {
 	for _, r := range VisibleRegionsFrom(p) {
 		r.Objects.Lock()
 		for _, o := range r.Objects.set {
-			if p.Near(o, p.ViewRadius() * 2) && !p.LocalObjects.Contains(o) {
+			if p.Near(o, p.ViewRadius()*2) && !p.LocalObjects.Contains(o) {
 				objects = append(objects, o.(*Object))
 			}
 		}
 		r.Objects.Unlock()
 	}
-	
+
 	return
 }
 
-//NewItems Returns nearby ground items that this player is unaware of.
+// NewItems Returns nearby ground items that this player is unaware of.
 func (p *Player) NewItems() (items []*GroundItem) {
 	for _, r := range VisibleRegionsFrom(p) {
 		r.Items.Lock()
 		for _, i := range r.Items.set {
-			if p.Near(i, p.ViewRadius() * 2) && !p.LocalItems.Contains(i) {
+			if p.Near(i, p.ViewRadius()*2) && !p.LocalItems.Contains(i) {
 				items = append(items, i.(*GroundItem))
 			}
 		}
@@ -697,7 +698,7 @@ func (p *Player) Unregister() {
 	p.Server().SubmitLogout(p)
 }
 
-//NewPlayers Returns nearby players that this player is unaware of.
+// NewPlayers Returns nearby players that this player is unaware of.
 func (p *Player) NewPlayers() (players *MobList) {
 	list := NewMobList()
 	for _, r := range VisibleRegionsFrom(p) {
@@ -713,7 +714,7 @@ func (p *Player) NewPlayers() (players *MobList) {
 	return list
 }
 
-//NewNPCs Returns nearby NPCs that this player is unaware of.
+// NewNPCs Returns nearby NPCs that this player is unaware of.
 func (p *Player) NewNPCs() (npcs *MobList) {
 	list := NewMobList()
 	for _, r := range VisibleRegionsFrom(p) {
@@ -722,7 +723,7 @@ func (p *Player) NewNPCs() (npcs *MobList) {
 			if p.Near(n, p.ViewRadius()-1) && !n.SessionCache().VarBool("removed", false) && !p.LocalNPCs.Contains(n) {
 				list.Add(n)
 			}
-			
+
 		}
 		r.NPCs.RUnlock()
 	}
@@ -730,12 +731,12 @@ func (p *Player) NewNPCs() (npcs *MobList) {
 	return list
 }
 
-//SetTradeTarget Sets the variable for the index of the player we are trying to trade
+// SetTradeTarget Sets the variable for the index of the player we are trying to trade
 func (p *Player) SetTradeTarget(index int) {
 	p.SetVar("tradetarget", index)
 }
 
-//IsTrading returns true if this player is in a trade, otherwise returns false.
+// IsTrading returns true if this player is in a trade, otherwise returns false.
 func (p *Player) IsTrading() bool {
 	return p.HasState(StateTrading)
 }
@@ -744,7 +745,7 @@ func (p *Player) IsPanelOpened() bool {
 	return p.HasState(StatePanelActive)
 }
 
-//ResetTrade resets trade-related variables.
+// ResetTrade resets trade-related variables.
 func (p *Player) ResetTrade() {
 	if p.IsTrading() {
 		p.UnsetVar("tradetarget")
@@ -771,12 +772,12 @@ func (p *Player) UpdateTradeOffer(target *Player) {
 	p.WritePacket(TradeUpdate(target))
 }
 
-//TradeTarget returns the game index of the player we are trying to trade with, or -1 if we have not made a trade request.
+// TradeTarget returns the game index of the player we are trying to trade with, or -1 if we have not made a trade request.
 func (p *Player) TradeTarget() int {
 	return p.VarInt("tradetarget", -1)
 }
 
-//CombatDelta returns the difference between our combat level and the other mobs combat level
+// CombatDelta returns the difference between our combat level and the other mobs combat level
 func (p *Player) CombatDelta(other entity.MobileEntity) int {
 	delta := p.Skills().CombatLevel() - other.Skills().CombatLevel()
 	if delta < 0 {
@@ -785,7 +786,7 @@ func (p *Player) CombatDelta(other entity.MobileEntity) int {
 	return delta
 }
 
-//DuelAccepted returns the status of the specified duel negotiation screens accepted button for this player.
+// DuelAccepted returns the status of the specified duel negotiation screens accepted button for this player.
 // Valid screens are 1 and 2.
 func (p *Player) DuelAccepted(screen int) bool {
 	return p.Duel.Accepted[screen-1]
@@ -799,7 +800,7 @@ func (p *Player) OpenDuelConfirm(target *Player) {
 	p.WritePacket(DuelConfirmationOpen(p, target))
 }
 
-//DuelAccepted returns the status of the specified duel negotiation screens accepted button for this player.
+// DuelAccepted returns the status of the specified duel negotiation screens accepted button for this player.
 // Valid screens are 1 and 2.
 func (p *Player) SetDuelAccepted(screen int, b bool) {
 	if b && screen == 2 && !p.Duel.Accepted[0] {
@@ -809,13 +810,13 @@ func (p *Player) SetDuelAccepted(screen int, b bool) {
 	p.Duel.Accepted[screen-1] = b
 }
 
-//SetDuelRule sets the duel rule associated with the specified index to b.
+// SetDuelRule sets the duel rule associated with the specified index to b.
 // Valid rule indices are 0 through 3.
 func (p *Player) SetDuelRule(index int, b bool) {
 	p.Duel.Rules[index] = !b
 }
 
-//DuelRule returns the rule associated with the specified index provided.
+// DuelRule returns the rule associated with the specified index provided.
 // Valid rule indices are 0 through 3.
 func (p *Player) duelRule(index int) bool {
 	return p.Duel.Rules[index]
@@ -826,7 +827,7 @@ func (p *Player) DuelRetreating() bool {
 }
 
 func (p *Player) DuelRules() [4]bool {
-	return [...]bool { p.Duel.Rules[0], p.Duel.Rules[1], p.Duel.Rules[2], p.Duel.Rules[3] }
+	return [...]bool{p.Duel.Rules[0], p.Duel.Rules[1], p.Duel.Rules[2], p.Duel.Rules[3]}
 }
 
 func (p *Player) DuelMagic() bool {
@@ -845,7 +846,7 @@ func (p *Player) CloseDuel() {
 	p.WritePacket(DuelClose)
 }
 
-//ResetDuel resets duel-related variables.
+// ResetDuel resets duel-related variables.
 func (p *Player) ResetDuel() {
 	//if target := p.DuelTarget(); target != nil && target.IsDueling()
 	if p.IsDueling() {
@@ -866,22 +867,22 @@ func (p *Player) UpdateDuelSettings() {
 	p.WritePacket(DuelOptions(p))
 }
 
-//IsDueling returns true if this player is negotiating a duel, otherwise returns false.
+// IsDueling returns true if this player is negotiating a duel, otherwise returns false.
 func (p *Player) IsDueling() bool {
 	return p.HasState(StateDueling)
 }
 
-//SetDuelTarget Sets p1 as the receivers dueling target.
+// SetDuelTarget Sets p1 as the receivers dueling target.
 func (p *Player) SetDuelTarget(p1 *Player) {
 	p.Duel.Target = p1
 }
 
-//ResetDuelTarget Removes receivers duel target, if any.
+// ResetDuelTarget Removes receivers duel target, if any.
 func (p *Player) ResetDuelTarget() {
 	p.Duel.Target = nil
 }
 
-//ResetDuelAccepted Resets receivers duel negotiation settings to indicate that neither screens are accepted.
+// ResetDuelAccepted Resets receivers duel negotiation settings to indicate that neither screens are accepted.
 func (p *Player) ResetDuelAccepted() {
 	p.SetDuelAccepted(1, false)
 	p.SetDuelAccepted(2, false)
@@ -893,7 +894,7 @@ func (p *Player) ResetDuelRules() {
 	}
 }
 
-//WritePacket sends a net to the client.
+// WritePacket sends a net to the client.
 func (p *Player) WritePacket(packet *net.Packet) {
 	if p == nil || (!p.Connected() && !packet.Bare) {
 		return
@@ -922,7 +923,7 @@ func (p *Player) OpenTradeScreen(target *Player) {
 	p.WritePacket(TradeOpen(target.ServerIndex()))
 }
 
-//Destroy sends a kill signal to the underlying client to tear down all of the I/O routines and save the player.
+// Destroy sends a kill signal to the underlying client to tear down all of the I/O routines and save the player.
 // Note: This should probably be ran in its own goroutine as it saves the player to the database.
 func (p *Player) Destroy() {
 	p.WriteNow(*Logout)
@@ -933,12 +934,12 @@ func (p *Player) Destroy() {
 		p.Attributes.SetVar("lastIP", p.CurrentIP())
 		close(p.InQueue)
 		close(p.OutQueue)
-		
+
 		if err := p.Socket.Close(); err != nil {
 			log.Warn("Couldn't close socket:", err)
 		}
 		if Players.Find(p) > -1 {
-			log.Debug("Unregistered:", p.Username() + "@" + p.CurrentIP())
+			log.Debug("Unregistered:", p.Username()+"@"+p.CurrentIP())
 			p.ResetAll()
 			go DefaultPlayerService.PlayerSave(p)
 			RemovePlayer(p)
@@ -952,7 +953,7 @@ func (p *Player) AtObject(object *Object) bool {
 	bounds := object.Boundaries()
 	if definitions.ScenaryObjects[object.ID].SolidityType == 2 || definitions.ScenaryObjects[object.ID].SolidityType == 3 {
 		// door types
-		return /* (!p.Collides(bounds[0]) && p.Collides(bounds[1])) && */p.WithinArea(bounds)
+		return /* (!p.Collides(bounds[0]) && p.Collides(bounds[1])) && */ p.WithinArea(bounds)
 	}
 
 	return p.CanReach(bounds) || (p.FinishedPath() && p.CanReachDiag(bounds))
@@ -1015,7 +1016,7 @@ func (p *Player) CanReachDiag(bounds [2]entity.Location) bool {
 	*/
 }
 
-//Initialize informs the client of all of the various attributes of this player, and starts the stat normalization
+// Initialize informs the client of all of the various attributes of this player, and starts the stat normalization
 // routine.
 func (p *Player) Initialize() {
 	// Mark down time of authentication
@@ -1029,7 +1030,7 @@ func (p *Player) Initialize() {
 	// update flags
 	p.SetAppearanceChanged()
 	p.UnsetVar("hasPlane")
-	
+
 	p.SetSpriteUpdated()
 
 	// settings panel
@@ -1066,10 +1067,10 @@ func (p *Player) Initialize() {
 	for _, fn := range LoginTriggers {
 		go fn(p)
 	}
-	p.Enqueue(playerEvents, map[string]int {"index": int(p.ServerIndex()), "ticket": int(p.AppearanceTicket())})
+	p.Enqueue(playerEvents, map[string]int{"index": int(p.ServerIndex()), "ticket": int(p.AppearanceTicket())})
 }
 
-//NewPlayerCtx Returns a reference to a new player with a parent context.
+// NewPlayerCtx Returns a reference to a new player with a parent context.
 func NewPlayerCtx(server context.Context, socket stdnet.Conn) *Player {
 	p := &Player{
 		Socket: socket,
@@ -1093,7 +1094,7 @@ func NewPlayerCtx(server context.Context, socket stdnet.Conn) *Player {
 		DuelOffer:        &Inventory{Capacity: 8},
 		InQueue:          make(chan *net.Packet, 5000),
 		OutQueue:         make(chan *net.Packet, 5000),
-		OpCiphers:		  [...]*isaac.ISAAC{nil, nil},
+		OpCiphers:        [...]*isaac.ISAAC{nil, nil},
 	}
 	p.Context, p.Cancel = context.WithCancel(context.WithValue(server, "player", p))
 	// TODO: Get rid of this self-referential member; figure out better way to handle client item updating
@@ -1102,17 +1103,17 @@ func NewPlayerCtx(server context.Context, socket stdnet.Conn) *Player {
 	return p
 }
 
-//NewPlayer Returns a reference to a new player, with context.Background as parent
+// NewPlayer Returns a reference to a new player, with context.Background as parent
 func NewPlayer(socket stdnet.Conn) *Player {
 	return NewPlayerCtx(context.Background(), socket)
 }
 
-//Message sends a message to the player.
+// Message sends a message to the player.
 func (p *Player) Message(msg string) {
 	p.WritePacket(ServerMessage(msg))
 }
 
-//OpenAppearanceChanger If the player is not fighting or trading, opens the appearance window.
+// OpenAppearanceChanger If the player is not fighting or trading, opens the appearance window.
 func (p *Player) OpenAppearanceChanger() {
 	if p.IsFighting() || p.IsTrading() {
 		return
@@ -1124,7 +1125,7 @@ func (p *Player) OpenAppearanceChanger() {
 const npcEvents = "npcEventQ"
 const playerEvents = "playerEventQ"
 
-//Chat sends a player NPC chat message packet to the player and all other players around it.  If multiple msgs are
+// Chat sends a player NPC chat message packet to the player and all other players around it.  If multiple msgs are
 // provided, will sleep the goroutine for 3-4 ticks between each message, depending on length of message.
 func (p *Player) Chat(msgs ...string) {
 	if len(msgs) <= 0 {
@@ -1140,13 +1141,13 @@ func (p *Player) Chat(msgs ...string) {
 	}
 }
 
-//QuestBroadcast Broadcasts a string as a message posted into the players quest chat history to the player and any nearby players.
+// QuestBroadcast Broadcasts a string as a message posted into the players quest chat history to the player and any nearby players.
 func (p *Player) QuestBroadcast(owner, target entity.MobileEntity, message string) {
 	p.enqueueArea(playerEvents, p.ViewRadius(), NewTargetedMessage(owner, target, message))
 	// p.enqueue(playerEvents, msg)
 }
 
-//QueuePublicChat Adds a message to a locked public-chat queue
+// QueuePublicChat Adds a message to a locked public-chat queue
 func (p *Player) QueuePublicChat(owner entity.MobileEntity, message string) {
 	// if !p.Contains("publicChatQ") {
 	// p.SetVar("publicChatQ", []ChatMessage{NewChatMessage(owner, message)})
@@ -1156,7 +1157,7 @@ func (p *Player) QueuePublicChat(owner entity.MobileEntity, message string) {
 	p.enqueue(playerEvents, NewChatMessage(owner, message))
 }
 
-//QueueQuestChat Adds a message to a locked quest-chat queue
+// QueueQuestChat Adds a message to a locked quest-chat queue
 // Second arg reserved as target for message
 func (p *Player) QueueQuestChat(owner, _ entity.MobileEntity, message string) {
 	// if !p.Contains("questChatQ") {
@@ -1174,7 +1175,7 @@ func (p *Player) QueueQuestChat(owner, _ entity.MobileEntity, message string) {
 	//p.enqueue(playerEvents, NewChatMessage(owner, message))
 }
 
-//QueueNpcChat Adds a message to a locked quest-chat queue
+// QueueNpcChat Adds a message to a locked quest-chat queue
 func (p *Player) QueueNpcChat(owner, target entity.MobileEntity, message string) {
 	//	if !p.Contains("npcChatQ") {
 	//		p.SetVar("npcChatQ", []ChatMessage{NewTargetedMessage(owner, target, message)})
@@ -1185,39 +1186,39 @@ func (p *Player) QueueNpcChat(owner, target entity.MobileEntity, message string)
 	// p.enqueue(playerEvents, NewTargetedMessage(owner, target, message))
 }
 
-func (p *Player) Enqueue(id string, e interface{}) {
+func (p *Player) Enqueue(id string, e any) {
 	// p.enqueue(id, e)
 	p.enqueueArea(id, p.ViewRadius(), e)
 }
-func (p *Player) enqueue(id string, e interface{}) {
-	if queue, ok := p.VarChecked(id).([]interface{}); queue != nil && ok {
+func (p *Player) enqueue(id string, e any) {
+	if queue, ok := p.VarChecked(id).([]any); queue != nil && ok {
 		p.SetVar(id, append(queue, e))
 		return
 	}
-	p.SetVar(id, []interface{}{e})
+	p.SetVar(id, []any{e})
 }
 
-//QueueNpcSplat Adds a message to a locked quest-chat queue
+// QueueNpcSplat Adds a message to a locked quest-chat queue
 func (p *Player) QueueNpcSplat(owner *NPC, dmg int) {
 	p.enqueue(npcEvents, NewHitsplat(owner, dmg))
 }
 
-//QueueProjectile Adds a missile to a locked projectile queue
+// QueueProjectile Adds a missile to a locked projectile queue
 func (p *Player) QueueProjectile(owner, target entity.MobileEntity, kind int) {
 	p.enqueue(playerEvents, NewProjectile(owner, target, kind))
 }
 
-//QueueHitsplat Adds a hit splat to a locked hit-splat queue
+// QueueHitsplat Adds a hit splat to a locked hit-splat queue
 func (p *Player) QueueHitsplat(owner entity.MobileEntity, dmg int) {
 	p.enqueue(playerEvents, NewHitsplat(owner, dmg))
 }
 
-//QueueItemBubble Adds an action item bubble to a locked item bubble queue
+// QueueItemBubble Adds an action item bubble to a locked item bubble queue
 func (p *Player) QueueItemBubble(owner *Player, id int) {
 	p.enqueue(playerEvents, ItemBubble{owner, id})
 }
 
-func (p *Player) enqueueArea(id string, radius int, e interface{}) {
+func (p *Player) enqueueArea(id string, radius int, e any) {
 	updated := NewMobList()
 	for _, region := range VisibleRegionsFrom(p) {
 		region.Players.RangePlayers(func(p1 *Player) bool {
@@ -1271,7 +1272,7 @@ func (p *Player) OpenOptionMenu(options ...string) int {
 	}
 }
 
-//CloseOptionMenu closes any open option menus.
+// CloseOptionMenu closes any open option menus.
 func (p *Player) CloseOptionMenu() {
 	if p.HasState(StateMenu) {
 		p.RemoveState(StateMenu)
@@ -1279,7 +1280,7 @@ func (p *Player) CloseOptionMenu() {
 	}
 }
 
-//CanWalk returns true if this player is in a state that allows walking.
+// CanWalk returns true if this player is in a state that allows walking.
 func (p *Player) CanWalk() bool {
 	if p.BusyInput() {
 		return true
@@ -1287,45 +1288,44 @@ func (p *Player) CanWalk() bool {
 	return !p.HasState(MSBatching, StateFighting, StateTrading, StateDueling, StateChangingLooks, StateSleeping, StateChatting, StateBusy, StateShopping, StateAction)
 }
 
-//PlaySound sends a command to the client to play a sound by its file name.
+// PlaySound sends a command to the client to play a sound by its file name.
 func (p *Player) PlaySound(soundName string) {
 	p.WritePacket(Sound(soundName))
 }
 
-//SendStat sends the information for the stat at idx to the player.
+// SendStat sends the information for the stat at idx to the player.
 func (p *Player) SendStat(idx int) {
 	p.WritePacket(PlayerStat(p, idx))
 }
 
-//SendStatExp sends the experience information for the stat at idx to the player.
+// SendStatExp sends the experience information for the stat at idx to the player.
 func (p *Player) SendStatExp(idx int) {
 	p.WritePacket(PlayerExperience(p, idx))
 }
 
-
-//SendStats sends all stat information to this player.
+// SendStats sends all stat information to this player.
 func (p *Player) SendStats() {
 	p.WritePacket(PlayerStats(p))
 }
 
-//SendInventory sends inventory information to this player.
+// SendInventory sends inventory information to this player.
 func (p *Player) SendInventory() {
 	p.WritePacket(InventoryItems(p))
 }
 
-//SetCurStat sets this players current stat at idx to lvl and updates the client about it.
+// SetCurStat sets this players current stat at idx to lvl and updates the client about it.
 func (p *Player) SetCurStat(idx int, lvl int) {
 	p.Skills().SetCur(idx, lvl)
 	p.SendStat(idx)
 }
 
-//IncCurStat sets this players current stat at idx to Current(idx)+lvl and updates the client about it.
+// IncCurStat sets this players current stat at idx to Current(idx)+lvl and updates the client about it.
 func (p *Player) IncCurStat(idx int, lvl int) {
 	p.Skills().IncreaseCur(idx, lvl)
 	p.SendStat(idx)
 }
 
-//SetCurStat sets this players current stat at idx to lvl and updates the client about it.
+// SetCurStat sets this players current stat at idx to lvl and updates the client about it.
 func (p *Player) IncExp(idx int, amt int) {
 	amt *= 20
 	p.Skills().IncExp(idx, amt/4)
@@ -1346,14 +1346,14 @@ func (p *Player) IncExp(idx int, amt int) {
 	}
 }
 
-//SetMaxStat sets this players maximum stat at idx to lvl and updates the client about it.
+// SetMaxStat sets this players maximum stat at idx to lvl and updates the client about it.
 func (p *Player) SetMaxStat(idx int, lvl int) {
 	p.Skills().SetMax(idx, lvl)
 	p.Skills().SetExp(idx, entity.LevelToExperience(lvl)/4)
 	p.SendStat(idx)
 }
 
-//AddItem Adds amount of the item with specified id to the players inventory, if possible, and updates the client about it.
+// AddItem Adds amount of the item with specified id to the players inventory, if possible, and updates the client about it.
 func (p *Player) AddItem(id, amount int) {
 	if p.Inventory.CanHold(id, amount) {
 		defer p.SendInventory()
@@ -1496,7 +1496,7 @@ func (p *Player) StartCombat(defender entity.MobileEntity) {
 			attacker, defender = defender, attacker
 		}()
 		if (defender.IsPlayer() && !AsPlayer(defender).Connected()) || !defender.HasState(StateFighting) ||
-			(attacker.IsPlayer() && !AsPlayer(attacker).Connected()) || !attacker.HasState(StateFighting) || attacker.LongestDelta(defender) > 0  {
+			(attacker.IsPlayer() && !AsPlayer(attacker).Connected()) || !attacker.HasState(StateFighting) || attacker.LongestDelta(defender) > 0 {
 			// target is a disconnected player, we are disconnected,
 			// one of us is not in a fight, or we are distanced somehow unexpectedly.  Kill tasks.
 			// quickfix for possible bugs I imagined will exist
@@ -1518,7 +1518,7 @@ func (p *Player) StartCombat(defender entity.MobileEntity) {
 	})
 }
 
-//Killed kills this player, dropping all of its items where it stands.
+// Killed kills this player, dropping all of its items where it stands.
 func (p *Player) Killed(killer entity.MobileEntity) {
 	p.SessionCache().SetVar("deathTime", time.Now())
 	p.PlaySound("death")
@@ -1583,31 +1583,31 @@ func (p *Player) Killed(killer entity.MobileEntity) {
 	// plane := p.Plane()
 	p.SetLocation(SpawnPoint, true)
 	// if p.Plane() != plane {
-		// p.SendPlane()
+	// p.SendPlane()
 	// }
 }
 
-//SendPlane sends the current plane of this player.
+// SendPlane sends the current plane of this player.
 func (p *Player) SendPlane() {
 	p.WritePacket(PlaneInfo(p))
 }
 
-//SendEquipBonuses sends the current equipment bonuses of this player.
+// SendEquipBonuses sends the current equipment bonuses of this player.
 func (p *Player) SendEquipBonuses() {
 	p.WritePacket(EquipmentStats(p))
 }
 
-//Damage sends a player damage bubble for this player to itself and any nearby players.
+// Damage sends a player damage bubble for this player to itself and any nearby players.
 func (p *Player) Damage(amt int) {
 	p.enqueueArea(playerEvents, 15, NewHitsplat(p, amt))
 }
 
-//ItemBubble sends an item action bubble for this player to itself and any nearby players.
+// ItemBubble sends an item action bubble for this player to itself and any nearby players.
 func (p *Player) ItemBubble(id int) {
 	p.enqueueArea(playerEvents, 15, ItemBubble{p, id})
 }
 
-//SetStat sets the current, maximum, and experience levels of the skill at idx to lvl, and updates the client about it.
+// SetStat sets the current, maximum, and experience levels of the skill at idx to lvl, and updates the client about it.
 func (p *Player) SetStat(idx, lvl int) {
 	p.Skills().SetCur(idx, lvl)
 	p.Skills().SetMax(idx, lvl)
@@ -1622,7 +1622,7 @@ func (p *Player) CurrentShop() *Shop {
 	return p.VarChecked("shop").(*Shop)
 }
 
-//OpenBank opens a shop screen for the player and sets the appropriate state variables.
+// OpenBank opens a shop screen for the player and sets the appropriate state variables.
 func (p *Player) OpenShop(shop *Shop) {
 	if p.IsFighting() || p.IsDueling() || p.State()&(StatePanelActive|StateFighting|StateDueling) != 0 {
 		return
@@ -1633,7 +1633,7 @@ func (p *Player) OpenShop(shop *Shop) {
 	p.WritePacket(ShopOpen(shop))
 }
 
-//CloseBank closes the bank screen for this player and sets the appropriate state variables
+// CloseBank closes the bank screen for this player and sets the appropriate state variables
 func (p *Player) CloseShop() {
 	if !p.HasState(StateShopping) {
 		return
@@ -1644,7 +1644,7 @@ func (p *Player) CloseShop() {
 	p.WritePacket(ShopClose)
 }
 
-//OpenBank opens a bank screen for the player and sets the appropriate state variables.
+// OpenBank opens a bank screen for the player and sets the appropriate state variables.
 func (p *Player) OpenBank() {
 	if p.IsFighting() || p.IsDueling() || p.State()&(StatePanelActive|StateFighting|StateDueling) != 0 {
 		return
@@ -1653,7 +1653,7 @@ func (p *Player) OpenBank() {
 	p.WritePacket(BankOpen(p))
 }
 
-//CloseBank closes the bank screen for this player and sets the appropriate state variables
+// CloseBank closes the bank screen for this player and sets the appropriate state variables
 func (p *Player) CloseBank() {
 	if !p.HasState(StateBanking) {
 		return
@@ -1662,7 +1662,7 @@ func (p *Player) CloseBank() {
 	p.WritePacket(BankClose)
 }
 
-//SendUpdateTimer sends a system update countdown timer to the client.
+// SendUpdateTimer sends a system update countdown timer to the client.
 func (p *Player) SendUpdateTimer() {
 	p.WritePacket(SystemUpdate(time.Until(UpdateTime).Nanoseconds() / 1000))
 }
@@ -1695,7 +1695,7 @@ func (p *Player) OpenSleepScreen() {
 	p.WritePacket(SleepWord(p))
 }
 
-//Read implements an io.Reader that detects what type of connection the underlying socket is using,
+// Read implements an io.Reader that detects what type of connection the underlying socket is using,
 // and interprets the network byte stream accordingly.  Websockets require a lot of extra book-keeping
 // to be used like this, and as such
 func (p *Player) Read(data []byte) (n int, err error) {
@@ -1712,7 +1712,7 @@ func (p *Player) Read(data []byte) (n int, err error) {
 			if err != nil {
 				if err == io.EOF && !header.Fin {
 					return -1, errors.NewNetworkError("EOF in the middle of a frame (kill websocket??)", true)
-				} else if err == io.ErrUnexpectedEOF || strings.Contains(err.Error(), "connection reset by peer") || strings.Contains(err.Error(), "use of closed") {
+				} else if stderr.Is(err, io.ErrUnexpectedEOF) || strings.Contains(err.Error(), "connection reset by peer") || strings.Contains(err.Error(), "use of closed") {
 					return -1, errors.NewNetworkError("closed conn", true)
 				} else if e, ok := err.(stdnet.Error); ok && e.Timeout() {
 					return -1, errors.NewNetworkError("timed out", true)
@@ -1727,7 +1727,7 @@ func (p *Player) Read(data []byte) (n int, err error) {
 			if err == io.EOF && p.IsWebsocket() && !p.webFrame.Fin {
 				// TODO: Figure best actions to take upon these events
 				return -1, errors.NewNetworkError("EOF in the middle of a frame (kill websocket??)", true)
-			} else if err == io.ErrUnexpectedEOF || strings.Contains(err.Error(), "connection reset by peer") || strings.Contains(err.Error(), "use of closed") {
+			} else if stderr.Is(err, io.ErrUnexpectedEOF) || strings.Contains(err.Error(), "connection reset by peer") || strings.Contains(err.Error(), "use of closed") {
 				return -1, errors.NewNetworkError("closed conn", true)
 			} else if e, ok := err.(stdnet.Error); ok && e.Timeout() {
 				return -1, errors.NewNetworkError("timed out", true)
@@ -1740,11 +1740,9 @@ func (p *Player) Read(data []byte) (n int, err error) {
 	return len(data), nil
 }
 
-
-
 func (p *Player) ReadPacket() (*net.Packet, error) {
 	header := make([]byte, 2)
-	
+
 	n, err := p.Read(header)
 	if err != nil {
 		switch err.(type) {
@@ -1754,14 +1752,14 @@ func (p *Player) ReadPacket() (*net.Packet, error) {
 			}
 		}
 		log.Warn("Error reading packet header:", err)
-		return nil, errors.NewNetworkError("Error reading header for packet:" + err.Error(), true)
+		return nil, errors.NewNetworkError("Error reading header for packet:"+err.Error(), true)
 	}
 	if n < 2 {
-		return nil, errors.NewNetworkError("Invalid packet-frame length recv; got " + strconv.Itoa(n), false)
+		return nil, errors.NewNetworkError("Invalid packet-frame length recv; got "+strconv.Itoa(n), false)
 	}
 	length := int(header[0] & 0xFF)
 	if length >= 160 {
-		length = (length-160) << 8 | int(header[1] & 0xFF)
+		length = (length-160)<<8 | int(header[1]&0xFF)
 	} else {
 		length -= 1
 	}
@@ -1779,7 +1777,7 @@ func (p *Player) ReadPacket() (*net.Packet, error) {
 		frame = append(frame, header[1])
 	}
 	// if cipher := p.OpCiphers[1]; cipher != nil {
-		// frame[0] = byte(uint32(frame[0]) - cipher.Uint32()) & 0xFF
+	// frame[0] = byte(uint32(frame[0]) - cipher.Uint32()) & 0xFF
 	// }
 
 	return net.NewPacket(frame[0], frame[1:]), nil
@@ -1787,51 +1785,51 @@ func (p *Player) ReadPacket() (*net.Packet, error) {
 
 func (p *Player) ProcPacketsIn() {
 	for {
-	select {
-	case packet, ok := <-p.InQueue:
-		if packet == nil || !ok {
+		select {
+		case packet, ok := <-p.InQueue:
+			if packet == nil || !ok {
+				return
+			}
+			// script packet handlers are the most `modern` solution, and will be the default selected for any incoming packet
+			opcode := packet.Opcode
+			if cipher := p.OpCiphers[1]; cipher != nil {
+				opcode = byte(uint32(packet.Opcode)-cipher.Uint32()) & 0xFF
+			}
+
+			if handlePacket := PacketTriggers[opcode]; handlePacket != nil {
+				handlePacket(p, packet)
+				continue
+			}
+
+			log.Debugf("Unhandled packet: {opcode%v, data[%v]:%v }\n", opcode, packet.Length(), packet.FrameBuffer)
+			continue
+		case <-p.Done():
+			return
+		default:
 			return
 		}
-		// script packet handlers are the most `modern` solution, and will be the default selected for any incoming packet
-		opcode := packet.Opcode
-		if cipher := p.OpCiphers[1]; cipher != nil {
-			opcode = byte(uint32(packet.Opcode) - cipher.Uint32()) & 0xFF
-		}
-
-		if handlePacket := PacketTriggers[opcode]; handlePacket != nil {
-			handlePacket(p, packet)
-			continue
-		}
-
-		log.Debugf("Unhandled packet: {opcode%v, data[%v]:%v }\n", opcode, packet.Length(), packet.FrameBuffer)
-		continue
-	case <-p.Done():
-		return
-	default:
-		return
-	}
 	}
 }
 
 func (p *Player) ProcPacketsOut() {
 	// i := 0
 	for {
-	select {
-	default:
-		return
-	case <-p.Done():
-		return
-	case packet, ok := <-p.OutQueue:
-		if packet == nil || !ok {
+		select {
+		default:
 			return
-		}
-		p.WriteNow(*packet)
-		p.Writer.Flush()
-		// i += 1
-		// if i > 4 {
+		case <-p.Done():
+			return
+		case packet, ok := <-p.OutQueue:
+			if packet == nil || !ok {
+				return
+			}
+			p.WriteNow(*packet)
+			p.Writer.Flush()
+			// i += 1
+			// if i > 4 {
 			// return
-		// }
-		continue
-	}
+			// }
+			continue
+		}
 	}
 }

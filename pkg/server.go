@@ -10,49 +10,49 @@
 package main
 
 import (
+	"bufio"
+	"context"
+	"crypto/rand"
 	"crypto/tls"
+	"encoding/binary"
+	"math"
 	stdnet "net"
 	"os"
 	"runtime"
-	"context"
-	"sync"
 	"strconv"
-	"time"
 	"strings"
-	"bufio"
-	"encoding/binary"
-	"math"
-	"crypto/rand"
+	"sync"
+	"time"
 
+	"github.com/BurntSushi/toml"
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws/wsutil"
 	"github.com/jessevdk/go-flags"
-	"github.com/BurntSushi/toml"
 
-	"github.com/spkaeros/rscgo/pkg/crypto"
 	"github.com/spkaeros/rscgo/pkg/config"
-	"github.com/spkaeros/rscgo/pkg/definitions"
-	"github.com/spkaeros/rscgo/pkg/tasks"
-	rscerrors "github.com/spkaeros/rscgo/pkg/errors"
+	"github.com/spkaeros/rscgo/pkg/crypto"
 	"github.com/spkaeros/rscgo/pkg/db"
-	"github.com/spkaeros/rscgo/pkg/isaac"
-	"github.com/spkaeros/rscgo/pkg/xtea"
-	"github.com/spkaeros/rscgo/pkg/rsa"
-	rscrand "github.com/spkaeros/rscgo/pkg/rand"
-	"github.com/spkaeros/rscgo/pkg/strutil"
+	"github.com/spkaeros/rscgo/pkg/definitions"
+	rscerrors "github.com/spkaeros/rscgo/pkg/errors"
 	"github.com/spkaeros/rscgo/pkg/game/net"
 	"github.com/spkaeros/rscgo/pkg/game/net/handshake"
 	"github.com/spkaeros/rscgo/pkg/game/world"
+	"github.com/spkaeros/rscgo/pkg/isaac"
 	"github.com/spkaeros/rscgo/pkg/log"
-	
+	rscrand "github.com/spkaeros/rscgo/pkg/rand"
+	"github.com/spkaeros/rscgo/pkg/rsa"
+	"github.com/spkaeros/rscgo/pkg/strutil"
+	"github.com/spkaeros/rscgo/pkg/tasks"
+	"github.com/spkaeros/rscgo/pkg/xtea"
 )
 
 type sigEnd chan struct{}
 
 const (
-	TickMillis = time.Millisecond*640
+	TickMillis = time.Millisecond * 640
 )
-//run Helper function for concurrently running a bunch of functions and waiting for them to complete
+
+// run Helper function for concurrently running a bunch of functions and waiting for them to complete
 func run(fns ...func()) {
 	w := &sync.WaitGroup{}
 	do := func(fn func()) {
@@ -78,7 +78,7 @@ type (
 	}
 	Server struct {
 		context.Context
-		loginQ chan *world.Player
+		loginQ  chan *world.Player
 		logoutQ chan *world.Player
 		sync.RWMutex
 		*time.Ticker
@@ -89,19 +89,27 @@ type (
 )
 
 var (
-	cliFlags = &Flags{}
-	start = time.Now()
+	cliFlags  = &Flags{}
+	start     = time.Now()
 	tlsConfig = &tls.Config{
 		Certificates: []tls.Certificate{
-			check(tls.LoadX509KeyPair("./data/ssl/fullchain.pem", "./data/ssl/privkey.pem")).(tls.Certificate),
+			//check(tls.LoadX509KeyPair("./data/ssl/fullchain.pem", "./data/ssl/privkey.pem")).(tls.Certificate),
+			func() tls.Certificate {
+				cert, err := tls.LoadX509KeyPair("./data/ssl/fullchain.pem", "./data/ssl/privkey.pem")
+				if err != nil {
+					log.Debugf("Error loading certificate: %v", err)
+					return tls.Certificate{}
+				}
+				return cert
+			}(),
 		},
-		ServerName: "rsclassic.dev",
-		InsecureSkipVerify: false,
-		SessionTicketsDisabled: true,
+		ServerName:               "rsclassic.dev",
+		InsecureSkipVerify:       false,
+		SessionTicketsDisabled:   true,
 		PreferServerCipherSuites: true,
 		// ClientAuth: tls.RequireAndVerifyClientCert,
 		ClientAuth: tls.NoClientCert,
-		Rand: rand.Reader,
+		Rand:       rand.Reader,
 	}
 	wsUpgrader = ws.Upgrader{
 		Protocol: func(protocol []byte) bool {
@@ -111,7 +119,8 @@ var (
 		WriteBufferSize: 5000,
 	}
 )
-func openUserDatabase()  {
+
+func openUserDatabase() {
 	run(func() {
 		world.DefaultPlayerService = db.NewPlayerServiceSql()
 	}, func() {
@@ -164,7 +173,7 @@ func main() {
 	if config.Port() >= 65534 || config.Port() < 0 {
 		log.Warn("Error: Invalid port number specified.")
 		log.Warn("Valid port numbers are 1-65533 (needs the port 1 above it open to bind a websockets listener).")
-		return 
+		return
 	}
 	config.Verbosity = int(math.Min(math.Max(float64(len(cliFlags.Verbose)), 0), 4))
 	// Three init phases after data backend is connected--Entity definitions, then tile collision bitmask loading, followed by entity spawn locations
@@ -172,7 +181,7 @@ func main() {
 	// data, it will result in a world filled with objects that are not solid.  Many similar bugs possible.  Best just to leave this be.
 	run(db.LoadTileDefinitions, db.LoadObjectDefinitions, db.LoadBoundaryDefinitions, db.LoadItemDefinitions, db.LoadNpcDefinitions)
 	run(world.LoadCollisionData, world.UnmarshalPackets, world.RunScripts)
-		// world.LoadCollisionData, world.UnmarshalPackets, world.RunScripts)
+	// world.LoadCollisionData, world.UnmarshalPackets, world.RunScripts)
 	run(db.LoadObjectLocations, db.LoadNpcLocations, db.LoadItemLocations)
 
 	if config.Verbose() {
@@ -196,13 +205,13 @@ func main() {
 			log.Debugf("Triggers[\n\t%d item actions,\n\t%d scenary actions,\n\t%d boundary actions,\n\t%d npc actions,\n\t%d item->boundary actions,\n\t%d item->scenary actions,\n\t%d attacking NPC actions,\n\t%d killing NPC actions\n];\n", len(world.ItemTriggers), len(world.ObjectTriggers), len(world.BoundaryTriggers), len(world.NpcTalkList), len(world.InvOnBoundaryTriggers), len(world.InvOnObjectTriggers), len(world.NpcAtkTriggers), len(world.NpcDeathTriggers))
 		}
 	}
-	log.Debug("Listening at TCP port " + strconv.Itoa(config.Port()))// + " (TCP), " + strconv.Itoa(config.WSPort()) + " (websockets)")
+	log.Debug("Listening at TCP port " + strconv.Itoa(config.Port())) // + " (TCP), " + strconv.Itoa(config.WSPort()) + " (websockets)")
 	log.Debug()
 	log.Debug("RSCGo has finished initializing world; we hope you enjoy it")
 	// go Instance.WsBind()
 	go Instance.Start()
 	Instance.Bind(config.Port())
-	select{}
+	select {}
 }
 
 func needsData(err error) bool {
@@ -214,7 +223,7 @@ var Instance = &Server{Ticker: time.NewTicker(world.TickMillis), loginQ: make(ch
 func (s *Server) accept(l stdnet.Listener) *world.Player {
 	socket, err := l.Accept()
 	if err != nil {
-		log.Warn("Problem accepting incoming TLS connection from '" + socket.RemoteAddr().String() + "':", err)
+		log.Warn("Problem accepting incoming TLS connection from '"+socket.RemoteAddr().String()+"':", err)
 		return nil
 	}
 	p := world.NewPlayerCtx(Instance, socket)
@@ -245,8 +254,8 @@ func (s *Server) Bind(port int) {
 			}
 		}
 	}
-	go bindTo(check(stdnet.Listen("tcp", ":" + strconv.Itoa(port+1))).(stdnet.Listener))
-	go bindTo(tls.NewListener(check(stdnet.Listen("tcp", ":" + strconv.Itoa(port))).(stdnet.Listener), tlsConfig))
+	go bindTo(check(stdnet.Listen("tcp", ":"+strconv.Itoa(port+1))).(stdnet.Listener))
+	go bindTo(tls.NewListener(check(stdnet.Listen("tcp", ":"+strconv.Itoa(port))).(stdnet.Listener), tlsConfig))
 }
 
 func (s *Server) Start() {
@@ -265,7 +274,7 @@ func (s *Server) Start() {
 			case <-ctx.Done():
 				return
 			default:
-				for i := 0; i < 25; i++ { 
+				for i := 0; i < 25; i++ {
 					select {
 					case p1, ok := <-s.loginQ:
 						if !ok || p1 == nil {
@@ -276,7 +285,7 @@ func (s *Server) Start() {
 						break
 					}
 				}
-				
+
 				world.Players.AsyncRange(func(p *world.Player) {
 					if p == nil {
 						return
@@ -307,9 +316,9 @@ func (s *Server) Start() {
 					}
 					if world.Chance(25) && n.Steps <= 0 && n.Ticks <= 0 {
 						// move some amount between 2-15 tiles, moving 1 tile per tick
-						n.Steps = rscrand.Intn(13+1)+2
+						n.Steps = rscrand.Intn(13+1) + 2
 						// wait some amount between 25-50 ticks before doing this again
-						n.Ticks = rscrand.Intn(10+1)+25
+						n.Ticks = rscrand.Intn(10+1) + 25
 					}
 					if n.Ticks > 0 {
 						n.Ticks -= 1
@@ -324,12 +333,12 @@ func (s *Server) Start() {
 				world.Players.AsyncRange(func(p *world.Player) {
 					sendPacket := func(p1 *net.Packet) {
 						if p != nil && p1 != nil {
-							p.WritePacket(p1)// <- p1
+							p.WritePacket(p1) // <- p1
 						}
 					}
 					// if p.HasState(world.StateChangingLooks) {
-						// sendPacket(world.AppearanceKeepalive)
-						// return
+					// sendPacket(world.AppearanceKeepalive)
+					// return
 					// }
 					sendPacket(world.PlayerPositions(p))
 					sendPacket(world.NPCPositions(p))
@@ -359,7 +368,7 @@ func (s *Server) Start() {
 					n.ResetAppearanceChanged()
 					return false
 				})
-				for i := 0; i < 25; i++ { 
+				for i := 0; i < 25; i++ {
 					select {
 					case p1, ok := <-s.logoutQ:
 						if !ok || p1 == nil {
@@ -372,8 +381,8 @@ func (s *Server) Start() {
 				}
 				if s.debug {
 					// if world.CurrentTick() % 100 == 0 {
-						// each 64 seconds we log our tick processing time
-						log.Debug("time to process tick:", time.Since(start))
+					// each 64 seconds we log our tick processing time
+					log.Debug("time to process tick:", time.Since(start))
 					// }
 				}
 			}
@@ -381,7 +390,7 @@ func (s *Server) Start() {
 	}
 }
 
-//Stop This will stop the game instance, if it is running.
+// Stop This will stop the game instance, if it is running.
 func (s *Server) Stop() {
 	log.Debug("Stopping...")
 	os.Exit(0)
@@ -394,10 +403,10 @@ func check(i interface{}, err error) interface{} {
 	}
 	return i
 }
-		
+
 func closestPlayer(n *world.NPC) *world.Player {
 	var closest *world.Player
-	distance := math.Pow(8.0,2)
+	distance := math.Pow(8.0, 2)
 	world.Region(n.X(), n.Y()).Players.RangePlayers(func(p1 *world.Player) bool {
 		if p1.EuclideanDistance(n) < distance {
 			closest = p1
@@ -421,10 +430,10 @@ func (s *Server) handleLogin(p *world.Player) {
 		p.Writer.Write([]byte{byte(i)})
 		p.Writer.Flush()
 		if !i.IsValid() {
-			log.Debug("[LOGIN]", p.Username() + "@" + p.CurrentIP(), "failed to login (" + reason + ")")
+			log.Debug("[LOGIN]", p.Username()+"@"+p.CurrentIP(), "failed to login ("+reason+")")
 			p.Unregister()
 		} else {
-			log.Debug("[LOGIN]", p.Username() + "@" + p.CurrentIP(), "successfully logged in")
+			log.Debug("[LOGIN]", p.Username()+"@"+p.CurrentIP(), "successfully logged in")
 			go func() {
 				defer p.Unregister()
 				world.AddPlayer(p)
@@ -440,7 +449,7 @@ func (s *Server) handleLogin(p *world.Player) {
 							}
 						}
 						p.InQueue <- packet
-						
+
 					}
 				}
 			}()
@@ -467,7 +476,7 @@ func (s *Server) handleLogin(p *world.Player) {
 
 	p.SetReconnecting(login.ReadBoolean())
 	if ver := login.ReadUint32(); ver != config.Version() {
-		sendReply(handshake.ResponseUpdated, "Invalid client version (" + strconv.Itoa(ver) + ")")
+		sendReply(handshake.ResponseUpdated, "Invalid client version ("+strconv.Itoa(ver)+")")
 		return
 	}
 
@@ -479,7 +488,7 @@ func (s *Server) handleLogin(p *world.Player) {
 		p.Writer.Write([]byte{byte(handshake.ResponseServerRejection)})
 		p.Writer.Flush()
 		return
-	} 
+	}
 
 	rsaData := rsa.RsaKeyPair.Decrypt(data)
 	offset := 0
@@ -501,7 +510,7 @@ func (s *Server) handleLogin(p *world.Player) {
 	p.OpCiphers[0] = isaac.New(keys...)
 	p.OpCiphers[1] = isaac.New(keys...)
 	// protocol pads password out to constant 19 chars long (+1 terminator) for some reason with 0x20 bytes
-	password := strings.TrimSpace(string(rsaData[offset:offset+19]))
+	password := strings.TrimSpace(string(rsaData[offset : offset+19]))
 	offset += 20
 	// The rscplus team viewed this data below as a nonce, but in my opinion, this is not the motivation for this data.
 	// I'd call these more of an initialization vector (IV), as wikipedia defines it, used to make RSA semantically secure.
@@ -575,7 +584,7 @@ func (s *Server) runLogout(p *world.Player) {
 	go p.Destroy()
 }
 
-func (s *Server) WrapWaitRoutines (ps []*world.Player, fns ...func(*world.Player)) ( func() ) {
+func (s *Server) WrapWaitRoutines(ps []*world.Player, fns ...func(*world.Player)) func() {
 	if len(ps) == 0 {
 		return nil
 	}
@@ -590,8 +599,8 @@ func (s *Server) WrapWaitRoutines (ps []*world.Player, fns ...func(*world.Player
 					if p == nil {
 						return
 					}
-				
-				// case <-p.Done():
+
+					// case <-p.Done():
 					// return
 					wait.Add(1)
 					go func() {
@@ -602,15 +611,15 @@ func (s *Server) WrapWaitRoutines (ps []*world.Player, fns ...func(*world.Player
 			}
 		}
 		// select {
-			// case <-ctx.Done():
-				// return
-			// default:
-				// for _, fn := range fns {
-					// go fn()
-				// }
-				// // world.Players.Range(func(p *world.Player) {
-					// // p.ProcPacketsIn() // dequeue incoming packets.  These are read off the socket then queued by each players own goroutine
-				// // })
+		// case <-ctx.Done():
+		// return
+		// default:
+		// for _, fn := range fns {
+		// go fn()
+		// }
+		// // world.Players.Range(func(p *world.Player) {
+		// // p.ProcPacketsIn() // dequeue incoming packets.  These are read off the socket then queued by each players own goroutine
+		// // })
 		// }
 		wait.Wait()
 	}

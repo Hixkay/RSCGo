@@ -23,19 +23,19 @@ import (
 	"github.com/spkaeros/rscgo/pkg/strutil"
 )
 
-//CollisionMask Represents a single tile in the game's landscape.
+// CollisionMask Represents a single tile in the game's landscape.
 type CollisionMask int16
 
-//Sector Represents a sector of 48x48(2304) tiles in the game's landscape.
+// Sector Represents a sector of 48x48(2304) tiles in the game's landscape.
 type Sector struct {
 	Tiles [2304]CollisionMask
 }
 
-//Sectors A map to store landscape sectors by their hashed file name.
+// Sectors A map to store landscape sectors by their hashed file name.
 var Sectors = make(map[int]*Sector)
 var SectorsLock sync.RWMutex
 
-//LoadCollisionData Loads the JAG archive './data/landscape.jag', decodes it, and stores the map sectors it holds in
+// LoadCollisionData Loads the JAG archive './data/landscape.jag', decodes it, and stores the map sectors it holds in
 // memory for quick access.
 func LoadCollisionData() {
 	archive := jag.New(config.DataDir() + string(os.PathSeparator) + "landscape.jag")
@@ -80,7 +80,7 @@ func ClipBit(direction int) int {
 	return mask
 }
 
-//Masks returns appropriate collision bitmasks to check for obstacles on when traversing from this location
+// Masks returns appropriate collision bitmasks to check for obstacles on when traversing from this location
 // toward the given x,y coordinates.
 // Returns: [2]byte {verticalMasks, horizontalMasks}
 func (l Location) Masks(x, y int) (masks [2]byte) {
@@ -109,7 +109,6 @@ func (l Location) Masks(x, y int) (masks [2]byte) {
 	return masks
 }
 
-//
 func (l Location) Mask(toward entity.Location) byte {
 	masks := l.Masks(toward.X(), toward.Y())
 	return masks[0] | masks[1]
@@ -118,14 +117,14 @@ func (l Location) Mask(toward entity.Location) byte {
 /*
 var blockedOverlays = [...]int{OverlayWater, definitions.OverlayDarkWater, definitions.OverlayBlack, definitions.OverlayWhite, definitions.OverlayLava, definitions.OverlayBlack2, definitions.OverlayBlack3, definitions.OverlayBlack4}
 
-func isOverlayBlocked(overlay int) bool {
-	for _, v := range blockedOverlays {
-		if v == definitions.Overlay {
-			return true
+	func isOverlayBlocked(overlay int) bool {
+		for _, v := range blockedOverlays {
+			if v == definitions.Overlay {
+				return true
+			}
 		}
+		return false
 	}
-	return false
-}
 */
 func IsTileBlocking(x, y int, bit byte, current bool) bool {
 	return CollisionData(x, y).blocked(bit, current)
@@ -156,9 +155,9 @@ func sectorFromCoords(x, y int) *Sector {
 func (s *Sector) tile(x, y int) CollisionMask {
 	areaX := (2304 + x) % RegionSize
 	areaY := (1776 + y - (944 * ((y + 100) / 944))) % RegionSize
-	if len(s.Tiles) <= 0 {
-		return 0
-	}
+	//if len(s.Tiles) <= 0 {
+	//	return 0
+	//}
 	return s.Tiles[areaX*RegionSize+areaY]
 }
 
@@ -166,7 +165,7 @@ func CollisionData(x, y int) CollisionMask {
 	return sectorFromCoords(x, y).tile(x, y)
 }
 
-//loadSector Parses raw data into data structures that make up a 48x48 map sector.
+// loadSector Parses raw data into data structures that make up a 48x48 map sector.
 func loadSector(data []byte) (s *Sector) {
 	// 48*48=2304 tiles per sector; 10 bytes per tile makes each sector 23040 bytes long
 	if len(data) < 23040 {
@@ -206,15 +205,15 @@ func loadSector(data []byte) (s *Sector) {
 				s.Tiles[tileIdx] |= ClipFullBlock
 			}
 			// if boundary := int(verticalWalls) - 1; boundary < len(definitions.BoundaryObjects) && boundary >= 0 {
-				// // log.Debugf("Out of bounds indexing attempted into definitions.BoundaryObjects[%d]; while upper bound is currently %d\n", boundary, len(definitions.BoundaryObjects)-1)
-				// if wall := definitions.BoundaryObjects[boundary]; !wall.Dynamic && wall.Solid {
-					// s.Tiles[x*RegionSize+y] |= ClipNorth
-					// if y > 0 {
-						// s.Tiles[x*RegionSize+y-1] |= ClipSouth
-					// }
-				// }
+			// // log.Debugf("Out of bounds indexing attempted into definitions.BoundaryObjects[%d]; while upper bound is currently %d\n", boundary, len(definitions.BoundaryObjects)-1)
+			// if wall := definitions.BoundaryObjects[boundary]; !wall.Dynamic && wall.Solid {
+			// s.Tiles[x*RegionSize+y] |= ClipNorth
+			// if y > 0 {
+			// s.Tiles[x*RegionSize+y-1] |= ClipSouth
 			// }
-			if boundary := definitions.Boundary(int(verticalWalls-1)); boundary.Defined() {
+			// }
+			// }
+			if boundary := definitions.Boundary(int(verticalWalls - 1)); boundary.Defined() {
 				if boundary.Solid() {
 					s.Tiles[x*RegionSize+y] |= ClipNorth
 					if x > 0 {
@@ -222,7 +221,7 @@ func loadSector(data []byte) (s *Sector) {
 					}
 				}
 			}
-			if boundary := definitions.Boundary(int(horizontalWalls-1)); boundary.Defined() {
+			if boundary := definitions.Boundary(int(horizontalWalls - 1)); boundary.Defined() {
 				if boundary.Solid() {
 					s.Tiles[x*RegionSize+y] |= ClipEast
 					if x > 0 {
@@ -231,13 +230,13 @@ func loadSector(data []byte) (s *Sector) {
 				}
 			}
 			// if boundary := int(horizontalWalls) - 1; boundary < len(definitions.BoundaryObjects) && boundary >= 0 {
-				// // log.Debugf("Out of bounds indexing attempted into definitions.BoundaryObjects[%d]; while upper bound is currently %d\n", boundary, len(definitions.BoundaryObjects)-1)
-				// if wall := definitions.BoundaryObjects[boundary]; !wall.Dynamic && wall.Solid {
-					// s.Tiles[x*RegionSize+y] |= ClipEast
-					// if x > 0 {
-						// s.Tiles[(x-1)*RegionSize+y] |= ClipWest
-					// }
-				// }
+			// // log.Debugf("Out of bounds indexing attempted into definitions.BoundaryObjects[%d]; while upper bound is currently %d\n", boundary, len(definitions.BoundaryObjects)-1)
+			// if wall := definitions.BoundaryObjects[boundary]; !wall.Dynamic && wall.Solid {
+			// s.Tiles[x*RegionSize+y] |= ClipEast
+			// if x > 0 {
+			// s.Tiles[(x-1)*RegionSize+y] |= ClipWest
+			// }
+			// }
 			// }
 			// TODO: Affect adjacent tiles in an intelligent way to determine which are solid and which are not
 			if diagonalWalls < 24000 && diagonalWalls > 0 {

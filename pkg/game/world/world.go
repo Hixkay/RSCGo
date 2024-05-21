@@ -7,11 +7,11 @@ import (
 	"time"
 
 	// "github.com/spkaeros/rscgo/pkg/definitions"
-	"github.com/spkaeros/rscgo/pkg/isaac"
-	"github.com/spkaeros/rscgo/pkg/tasks"
 	"github.com/spkaeros/rscgo/pkg/game/entity"
+	"github.com/spkaeros/rscgo/pkg/isaac"
 	"github.com/spkaeros/rscgo/pkg/log"
 	rscRand "github.com/spkaeros/rscgo/pkg/rand"
+	"github.com/spkaeros/rscgo/pkg/tasks"
 )
 
 const (
@@ -51,7 +51,7 @@ const (
 	LowerBound = RegionSize / 2
 )
 
-//UpdateTime a point in time in the future to log all active players out and shut down the game for updates.
+// UpdateTime a point in time in the future to log all active players out and shut down the game for updates.
 // Before the command is issued to set this time, it is initialized to time.Time{} zero value.
 var UpdateTime time.Time
 
@@ -83,10 +83,10 @@ type PlayerList struct {
 	curIdx int
 }
 
-//Players Collection containing all of the active client, by index and username hash, guarded by a mutex
+// Players Collection containing all of the active client, by index and username hash, guarded by a mutex
 var Players = &PlayerList{free: make(indexQueue, 0, 1250), PlayersList: make(PlayersList)}
 
-//FindHash Returns the client with the base37 username `hash` if it exists and true, otherwise returns nil and false.
+// FindHash Returns the client with the base37 username `hash` if it exists and true, otherwise returns nil and false.
 func (m *PlayerList) FindHash(hash uint64) (*Player, bool) {
 	m.RLock()
 	defer m.RUnlock()
@@ -98,7 +98,7 @@ func (m *PlayerList) FindHash(hash uint64) (*Player, bool) {
 	return nil, false
 }
 
-//FromIndex Returns the client with the index `index` if it exists and true, otherwise returns nil and false.
+// FromIndex Returns the client with the index `index` if it exists and true, otherwise returns nil and false.
 func (m *PlayerList) FindIndex(index int) (*Player, bool) {
 	if index < 0 {
 		return nil, false
@@ -113,25 +113,25 @@ func (m *PlayerList) FindIndex(index int) (*Player, bool) {
 	return nil, false
 }
 
-//Find Returns the slot that this player occupies in the set.
+// Find Returns the slot that this player occupies in the set.
 func (m *PlayerList) Find(player *Player) int {
 	return m.ForEach(func(p *Player) bool {
 		return p == player
 	})
 }
 
-//Contains Returns true if this player is assigned to a slot in the set, otherwise returns false.
+// Contains Returns true if this player is assigned to a slot in the set, otherwise returns false.
 func (m *PlayerList) Contains(player *Player) bool {
 	return m.Find(player) > -1
 }
 
-//ContainsHash Returns true if there is a client mapped to this username hash is in this collection, otherwise returns false.
+// ContainsHash Returns true if there is a client mapped to this username hash is in this collection, otherwise returns false.
 func (m *PlayerList) ContainsHash(hash uint64) bool {
 	_, ret := m.FindHash(hash)
 	return ret
 }
 
-//Put Finds the lowest available empty slot in the list, and puts the player there.
+// Put Finds the lowest available empty slot in the list, and puts the player there.
 // This will also assign the players server index variable (*Player.Index) to the assigned slot.
 func (m *PlayerList) Put(player *Player) {
 	if m.Contains(player) {
@@ -140,15 +140,15 @@ func (m *PlayerList) Put(player *Player) {
 	}
 	player.SetServerIndex(m.nextSlot())
 	// for player.ServerIndex() >= len(m.PlayersList) {
-		// m.PlayersList = append(m.PlayersList, nil)
+	// m.PlayersList = append(m.PlayersList, nil)
 	// }
 	m.Lock()
 	defer m.Unlock()
-	m.PlayersList[player] = struct{}{}// = append(m.PlayersList, player)
+	m.PlayersList[player] = struct{}{} // = append(m.PlayersList, player)
 	// m.PlayersList[player.ServerIndex()] = player
 }
 
-//Remove Removes a client from the set.
+// Remove Removes a client from the set.
 func (m *PlayerList) Remove(player *Player) {
 	slot := player.ServerIndex()
 	if slot == -1 {
@@ -161,18 +161,18 @@ func (m *PlayerList) Remove(player *Player) {
 	delete(m.PlayersList, player)
 	// m.PlayersList[slot] = nil
 	// if len(m.PlayersList) == 1 {
-		// m.PlayersList = m.PlayersList[:0]
+	// m.PlayersList = m.PlayersList[:0]
 	// } else {
-		// if slot < len(m.PlayersList)-1 {
-			// m.PlayersList = append(m.PlayersList[:slot], m.PlayersList[slot+1:]...)
-		// } else {
-			// m.PlayersList = m.PlayersList[:slot]
-		// }
+	// if slot < len(m.PlayersList)-1 {
+	// m.PlayersList = append(m.PlayersList[:slot], m.PlayersList[slot+1:]...)
+	// } else {
+	// m.PlayersList = m.PlayersList[:slot]
+	// }
 	// }
 	m.free.Push(slot)
 }
 
-//Range Calls action for every active client in the collection.
+// Range Calls action for every active client in the collection.
 func (m *PlayerList) Range(action func(*Player)) {
 	m.RLock()
 	defer m.RUnlock()
@@ -183,7 +183,7 @@ func (m *PlayerList) Range(action func(*Player)) {
 	}
 }
 
-//Range Calls action for every active client in the collection.
+// Range Calls action for every active client in the collection.
 func (m *PlayerList) ForEach(action func(*Player) bool) int {
 	m.RLock()
 	defer m.RUnlock()
@@ -198,14 +198,14 @@ func (m *PlayerList) ForEach(action func(*Player) bool) int {
 	return -1
 }
 
-//Size Returns the size of the active client collection.
+// Size Returns the size of the active client collection.
 func (m *PlayerList) Size() int {
 	m.RLock()
 	defer m.RUnlock()
 	return len(m.PlayersList)
 }
 
-//NextIndex Returns the lowest available index for the client to be mapped to.
+// NextIndex Returns the lowest available index for the client to be mapped to.
 func (m *PlayerList) nextSlot() int {
 	m.Lock()
 	defer m.Unlock()
@@ -222,8 +222,8 @@ func (m *PlayerList) Set() []*Player {
 
 	i := 0
 	for k := range m.PlayersList {
-	    keys[i] = k
-	    i++
+		keys[i] = k
+		i++
 	}
 	return keys
 }
@@ -236,7 +236,7 @@ func (m *PlayerList) AsyncRange(fn func(*Player)) {
 		go func(player *Player) {
 			fn(player)
 			// if i == sz {
-				// done <- struct{}{}
+			// done <- struct{}{}
 			// }
 			done <- struct{}{}
 		}(player)
@@ -256,7 +256,7 @@ func (m *PlayerList) AsyncRange(fn func(*Player)) {
 	}
 }
 
-//region Represents a 48x48 section of map.  The purpose of this is to keep track of entities in the entire world without having to allocate tiles individually, which would make search algorithms slower and utilizes a great deal of memory.
+// region Represents a 48x48 section of map.  The purpose of this is to keep track of entities in the entire world without having to allocate tiles individually, which would make search algorithms slower and utilizes a great deal of memory.
 type region struct {
 	x       int
 	y       int
@@ -268,56 +268,56 @@ type region struct {
 
 var regions [HorizontalPlanes][VerticalPlanes]*region
 
-//IsValid Returns true if the tile at x,y is within world boundaries, false otherwise.
+// IsValid Returns true if the tile at x,y is within world boundaries, false otherwise.
 func WithinWorld(x, y int) bool {
 	return x <= MaxX && x >= 0 && y >= 0 && y <= MaxY
 }
 
-//AddPlayer Add a player to a region of the game world.
+// AddPlayer Add a player to a region of the game world.
 func AddPlayer(p *Player) {
 	Players.Put(p)
 	Region(p.X(), p.Y()).Players.Add(p)
 	// Players.Range(func(player *Player) {
-		// if player.FriendList.Contains(p.Username()) && (!p.FriendBlocked() || p.FriendList.Contains(player.Username())) {
-			// player.FriendList.Set(p.Username(), true)
-			// player.WritePacket(FriendUpdate(p.UsernameHash(), true))
-		// }
-// 
-		// //		if player.FriendList.Contains(p.Username()) {
-		// //			player.WritePacket(FriendUpdate(p.UsernameHash(), p.FriendList.Contains(player.Username()) || !p.FriendBlocked()))
-		// //		}
+	// if player.FriendList.Contains(p.Username()) && (!p.FriendBlocked() || p.FriendList.Contains(player.Username())) {
+	// player.FriendList.Set(p.Username(), true)
+	// player.WritePacket(FriendUpdate(p.UsernameHash(), true))
+	// }
+	//
+	// //		if player.FriendList.Contains(p.Username()) {
+	// //			player.WritePacket(FriendUpdate(p.UsernameHash(), p.FriendList.Contains(player.Username()) || !p.FriendBlocked()))
+	// //		}
 	// })
 }
 
-//RemovePlayer Remove a player from the game world.
+// RemovePlayer Remove a player from the game world.
 func RemovePlayer(p *Player) {
 	p.SetRegionRemoved()
 	Region(p.X(), p.Y()).Players.Remove(p)
 	Players.Remove(p)
 	// Players.Range(func(player *Player) {
-		// if player.FriendList.Contains(p.Username()) && (!p.FriendBlocked() || p.FriendList.Contains(player.Username())) {
-			// player.FriendList.Set(p.Username(), false)
-			// player.WritePacket(FriendUpdate(p.UsernameHash(), false))
-		// }
+	// if player.FriendList.Contains(p.Username()) && (!p.FriendBlocked() || p.FriendList.Contains(player.Username())) {
+	// player.FriendList.Set(p.Username(), false)
+	// player.WritePacket(FriendUpdate(p.UsernameHash(), false))
+	// }
 	// })
 }
 
-//AddNpc Add a NPC to the region.
+// AddNpc Add a NPC to the region.
 func AddNpc(n *NPC) {
 	Region(n.X(), n.Y()).NPCs.Add(n)
 }
 
-//RemoveNpc SetRegionRemoved a NPC from the region.
+// RemoveNpc SetRegionRemoved a NPC from the region.
 func RemoveNpc(n *NPC) {
 	Region(n.X(), n.Y()).NPCs.Remove(n)
 }
 
-//AddItem Add a ground item to the region.
+// AddItem Add a ground item to the region.
 func AddItem(i *GroundItem) {
 	Region(i.X(), i.Y()).Items.Add(i)
 }
 
-//GetItem Returns the item at x,y with the specified id.  Returns nil if it can not find the item.
+// GetItem Returns the item at x,y with the specified id.  Returns nil if it can not find the item.
 func GetItem(x, y, id int) *GroundItem {
 	region := Region(x, y)
 	region.Items.RLock()
@@ -333,37 +333,37 @@ func GetItem(x, y, id int) *GroundItem {
 	return nil
 }
 
-//RemoveItem SetRegionRemoved a ground item to the region.
+// RemoveItem SetRegionRemoved a ground item to the region.
 func RemoveItem(i *GroundItem) {
 	Region(i.X(), i.Y()).Items.Remove(i)
 }
 
 type mapBarrier interface {
-	// should return true if this barrier is totally impassable, blocking all mobs
+	// Solid should return true if this barrier is totally impassable, blocking all mobs
 	// from walking on it so long as it stands in the way
 	// example being things like counters or altars...
 	Solid() bool
 
-	// should return true if this barrier only blocks mobs coming at them from specific
+	// Door should return true if this barrier only blocks mobs coming at them from specific
 	// directions.  Typically results in one to three tiles being blocked as source locations
 	// Example being bank doors or member gates, so on..
 	Door() bool
 
-	// returns true if both Door and Solid return false
+	// Passable returns true if both Door and Solid return false
 	// just a shortcut for doing this check manually
 	Passable() bool
 
-	// How many rows this barrier occupies
+	// Width How many rows this barrier occupies
 	Width() int
-	// How many columns this barrier occupies
+	// Height How many columns this barrier occupies
 	Height() int
 
-	// returns true if we have a stored entry for this type of barrier
+	// Defined returns true if we have a stored entry for this type of barrier
 	// otherwise, returns false
 	Defined() bool
 }
 
-//AddObject Add an object to the region.
+// AddObject Add an object to the region.
 func AddObject(o *Object) {
 	Region(o.X(), o.Y()).Objects.Add(o)
 	data := o.TypeData()
@@ -374,9 +374,9 @@ func AddObject(o *Object) {
 		return
 	}
 	if o.Boundary {
-		x,y := o.X(),o.Y()
-		areaX := (2304+x) % RegionSize
-		areaY := (1776+y - (944*((y+100)/944))) % RegionSize
+		x, y := o.X(), o.Y()
+		areaX := (2304 + x) % RegionSize
+		areaY := (1776 + y - (944 * ((y + 100) / 944))) % RegionSize
 		switch o.Direction {
 		case 0:
 			sectorFromCoords(x, y).Tiles[areaX*RegionSize+areaY] |= ClipNorth
@@ -401,12 +401,12 @@ func AddObject(o *Object) {
 	}
 	for dx := 0; dx < width; dx++ {
 		for dy := 0; dy < height; dy++ {
-			x,y := o.X()+dx,o.Y()+dy
-			areaX := (2304+x) % RegionSize
-			areaY := (1776+y - (944*((y+100)/944))) % RegionSize
-			if len(sectorFromCoords(x, y).Tiles) <= 0 {
-				return
-			}
+			x, y := o.X()+dx, o.Y()+dy
+			areaX := (2304 + x) % RegionSize
+			areaY := (1776 + y - (944 * ((y + 100) / 944))) % RegionSize
+			//if len(sectorFromCoords(x, y).Tiles) <= 0 {
+			//	return
+			//}
 			if data.Solid() {
 				sectorFromCoords(x, y).Tiles[areaX*RegionSize+areaY] |= ClipFullBlock
 				continue
@@ -416,7 +416,7 @@ func AddObject(o *Object) {
 				// Block the tiles east side
 				sectorFromCoords(x, y).Tiles[areaX*RegionSize+areaY] |= ClipEast
 				// ensure that the neighbors index is valid
-				if len(sectorFromCoords(x-1, y).Tiles) > 0 && (areaX > 0 || areaY >= RegionSize) {
+				if areaX > 0 || areaY >= RegionSize {
 					// then block the eastern neighbors west side
 					sectorFromCoords(x-1, y).Tiles[(areaX-1)*RegionSize+areaY] |= ClipWest
 				}
@@ -436,7 +436,7 @@ func AddObject(o *Object) {
 				// Block the tiles north side
 				sectorFromCoords(x, y).Tiles[areaX*RegionSize+areaY] |= ClipNorth
 				// ensure that the neighbors index is valid
-				if len(sectorFromCoords(x, y-1).Tiles) > 0 && areaX+areaY > 0 {
+				if areaX+areaY > 0 {
 					// then block the eastern neighbors west side
 					sectorFromCoords(x, y-1).Tiles[areaX*RegionSize+areaY-1] |= ClipSouth
 				}
@@ -444,98 +444,98 @@ func AddObject(o *Object) {
 		}
 	}
 	// if !o.Boundary {
-		// scenary := definitions.ScenaryObjects[o.ID]
-		// // type 0 is used when the object causes no collisions of any sort.
-		// // type 1 is used when the object fully blocks the tile(s) that it sits on.  Marks tile as fully blocked.
-		// // type 2 is used when the object mimics a boundary, e.g for gates and the like.
-		// // type 3 is used when the object mimics an opened door-type boundary, e.g opened gates and the like.
-		// if scenary.SolidityType == 0 || scenary.SolidityType == 3 {
-			// return
-		// }
-		// width, height := scenary.Height(), scenary.Width()
-		// //if o.Direction == 0 || o.Direction == 4 {
-		// if o.Direction%4 == 0 {
-			// width, height = height, width
-		// }
-		// for x := o.X(); x < o.X()+width; x++ {
-			// for y := o.Y(); y < o.Y()+height; y++ {
-				// areaX := (2304 + x) % RegionSize
-				// areaY := (1776 + y - (944 * ((y + 100) / 944))) % RegionSize
-				// if len(sectorFromCoords(x, y).Tiles) <= 0 {
-					// log.Warning.Println("ERROR: Sector with no tiles at:" + strconv.Itoa(x) + "," + strconv.Itoa(y) + " (" + strconv.Itoa(areaX) + "," + strconv.Itoa(areaY) + "\n")
-					// return
-				// }
-				// if scenary.SolidityType == 1 {
-					// // Blocks the whole tile.  Can not walk on it from any direction
-					// sectorFromCoords(x, y).Tiles[areaX*RegionSize+areaY] |= ClipFullBlock
-					// continue
-				// }
-// 
-				// // If it's gone this far, collisionType is 2 (directional blocking, e.g gates etc)
-				// if o.Direction == byte(North) {
-					// // Block the tiles east side
-					// sectorFromCoords(x, y).Tiles[areaX*RegionSize+areaY] |= ClipEast
-					// // ensure that the neighbors index is valid
-					// if len(sectorFromCoords(x-1, y).Tiles) > 0 && (areaX > 0 || areaY >= RegionSize) {
-						// // then block the eastern neighbors west side
-						// sectorFromCoords(x-1, y).Tiles[(areaX-1)*RegionSize+areaY] |= ClipWest
-					// }
-				// } else if o.Direction == byte(West) {
-					// // Block the tiles south side
-					// sectorFromCoords(x, y).Tiles[areaX*RegionSize+areaY] |= ClipSouth
-					// // then block the southern neighbors north side
-					// sectorFromCoords(x, y+1).Tiles[areaX*RegionSize+areaY+1] |= ClipNorth
-				// } else if o.Direction == byte(South) {
-					// // Block the tiles west side
-					// sectorFromCoords(x, y).Tiles[areaX*RegionSize+areaY] |= ClipWest
-					// // then block the western neighbors east side
-					// if areaX, areaY := (2304+x+1)%RegionSize, (1776+y-(944*((y+100)/944)))%RegionSize; (areaX+1)*RegionSize+areaY > 2304 {
-						// sectorFromCoords(x+1, y).Tiles[areaX*RegionSize+areaY] |= ClipEast
-					// }
-				// } else if o.Direction == byte(East) {
-					// // Block the tiles north side
-					// sectorFromCoords(x, y).Tiles[areaX*RegionSize+areaY] |= ClipNorth
-					// // ensure that the neighbors index is valid
-					// if len(sectorFromCoords(x, y-1).Tiles) > 0 && areaX+areaY > 0 {
-						// // then block the eastern neighbors west side
-						// sectorFromCoords(x, y-1).Tiles[areaX*RegionSize+areaY-1] |= ClipSouth
-					// }
-				// }
-// 
-			// }
-		// }
+	// scenary := definitions.ScenaryObjects[o.ID]
+	// // type 0 is used when the object causes no collisions of any sort.
+	// // type 1 is used when the object fully blocks the tile(s) that it sits on.  Marks tile as fully blocked.
+	// // type 2 is used when the object mimics a boundary, e.g for gates and the like.
+	// // type 3 is used when the object mimics an opened door-type boundary, e.g opened gates and the like.
+	// if scenary.SolidityType == 0 || scenary.SolidityType == 3 {
+	// return
+	// }
+	// width, height := scenary.Height(), scenary.Width()
+	// //if o.Direction == 0 || o.Direction == 4 {
+	// if o.Direction%4 == 0 {
+	// width, height = height, width
+	// }
+	// for x := o.X(); x < o.X()+width; x++ {
+	// for y := o.Y(); y < o.Y()+height; y++ {
+	// areaX := (2304 + x) % RegionSize
+	// areaY := (1776 + y - (944 * ((y + 100) / 944))) % RegionSize
+	// if len(sectorFromCoords(x, y).Tiles) <= 0 {
+	// log.Warning.Println("ERROR: Sector with no tiles at:" + strconv.Itoa(x) + "," + strconv.Itoa(y) + " (" + strconv.Itoa(areaX) + "," + strconv.Itoa(areaY) + "\n")
+	// return
+	// }
+	// if scenary.SolidityType == 1 {
+	// // Blocks the whole tile.  Can not walk on it from any direction
+	// sectorFromCoords(x, y).Tiles[areaX*RegionSize+areaY] |= ClipFullBlock
+	// continue
+	// }
+	//
+	// // If it's gone this far, collisionType is 2 (directional blocking, e.g gates etc)
+	// if o.Direction == byte(North) {
+	// // Block the tiles east side
+	// sectorFromCoords(x, y).Tiles[areaX*RegionSize+areaY] |= ClipEast
+	// // ensure that the neighbors index is valid
+	// if len(sectorFromCoords(x-1, y).Tiles) > 0 && (areaX > 0 || areaY >= RegionSize) {
+	// // then block the eastern neighbors west side
+	// sectorFromCoords(x-1, y).Tiles[(areaX-1)*RegionSize+areaY] |= ClipWest
+	// }
+	// } else if o.Direction == byte(West) {
+	// // Block the tiles south side
+	// sectorFromCoords(x, y).Tiles[areaX*RegionSize+areaY] |= ClipSouth
+	// // then block the southern neighbors north side
+	// sectorFromCoords(x, y+1).Tiles[areaX*RegionSize+areaY+1] |= ClipNorth
+	// } else if o.Direction == byte(South) {
+	// // Block the tiles west side
+	// sectorFromCoords(x, y).Tiles[areaX*RegionSize+areaY] |= ClipWest
+	// // then block the western neighbors east side
+	// if areaX, areaY := (2304+x+1)%RegionSize, (1776+y-(944*((y+100)/944)))%RegionSize; (areaX+1)*RegionSize+areaY > 2304 {
+	// sectorFromCoords(x+1, y).Tiles[areaX*RegionSize+areaY] |= ClipEast
+	// }
+	// } else if o.Direction == byte(East) {
+	// // Block the tiles north side
+	// sectorFromCoords(x, y).Tiles[areaX*RegionSize+areaY] |= ClipNorth
+	// // ensure that the neighbors index is valid
+	// if len(sectorFromCoords(x, y-1).Tiles) > 0 && areaX+areaY > 0 {
+	// // then block the eastern neighbors west side
+	// sectorFromCoords(x, y-1).Tiles[areaX*RegionSize+areaY-1] |= ClipSouth
+	// }
+	// }
+	//
+	// }
+	// }
 	// } else {
-		// boundary := definitions.BoundaryObjects[o.ID]
-		// if !boundary.Solid {
-			// // Doorframes and some other stuff collide with nothing.
-			// return
-		// }
-		// x, y := o.X(), o.Y()
-		// areaX := (2304 + x) % RegionSize
-		// areaY := (1776 + y - (944 * ((y + 100) / 944))) % RegionSize
-		// if len(sectorFromCoords(x, y).Tiles) <= 0 {
-			// log.Warn("ERROR: Sector with no tiles at:" + strconv.Itoa(x) + "," + strconv.Itoa(y) + " (" + strconv.Itoa(areaX) + "," + strconv.Itoa(areaY) + "\n")
-			// return
-		// }
-		// if o.Direction == 0 {
-			// sectorFromCoords(x, y).Tiles[areaX*RegionSize+areaY] |= ClipNorth
-			// if areaX+areaY > 0 {
-				// sectorFromCoords(x, y-1).Tiles[areaX*RegionSize+areaY-1] |= ClipSouth
-			// }
-		// } else if o.Direction == 1 {
-			// sectorFromCoords(x, y).Tiles[areaX*RegionSize+areaY] |= ClipEast
-			// if areaX > 0 || areaY >= 48 {
-				// sectorFromCoords(x-1, y).Tiles[(areaX-1)*RegionSize+areaY] |= ClipWest
-			// }
-		// } else if o.Direction == 2 {
-			// sectorFromCoords(x, y).Tiles[areaX*RegionSize+areaY] |= ClipSwNe
-		// } else if o.Direction == 3 {
-			// sectorFromCoords(x, y).Tiles[areaX*RegionSize+areaY] |= ClipSeNw
-		// }
+	// boundary := definitions.BoundaryObjects[o.ID]
+	// if !boundary.Solid {
+	// // Doorframes and some other stuff collide with nothing.
+	// return
+	// }
+	// x, y := o.X(), o.Y()
+	// areaX := (2304 + x) % RegionSize
+	// areaY := (1776 + y - (944 * ((y + 100) / 944))) % RegionSize
+	// if len(sectorFromCoords(x, y).Tiles) <= 0 {
+	// log.Warn("ERROR: Sector with no tiles at:" + strconv.Itoa(x) + "," + strconv.Itoa(y) + " (" + strconv.Itoa(areaX) + "," + strconv.Itoa(areaY) + "\n")
+	// return
+	// }
+	// if o.Direction == 0 {
+	// sectorFromCoords(x, y).Tiles[areaX*RegionSize+areaY] |= ClipNorth
+	// if areaX+areaY > 0 {
+	// sectorFromCoords(x, y-1).Tiles[areaX*RegionSize+areaY-1] |= ClipSouth
+	// }
+	// } else if o.Direction == 1 {
+	// sectorFromCoords(x, y).Tiles[areaX*RegionSize+areaY] |= ClipEast
+	// if areaX > 0 || areaY >= 48 {
+	// sectorFromCoords(x-1, y).Tiles[(areaX-1)*RegionSize+areaY] |= ClipWest
+	// }
+	// } else if o.Direction == 2 {
+	// sectorFromCoords(x, y).Tiles[areaX*RegionSize+areaY] |= ClipSwNe
+	// } else if o.Direction == 3 {
+	// sectorFromCoords(x, y).Tiles[areaX*RegionSize+areaY] |= ClipSeNw
+	// }
 	// }
 }
 
-//RemoveObject SetRegionRemoved an object from the region.
+// RemoveObject SetRegionRemoved an object from the region.
 func RemoveObject(o *Object) {
 	Region(o.X(), o.Y()).Objects.Remove(o)
 	data := o.TypeData()
@@ -553,11 +553,11 @@ func RemoveObject(o *Object) {
 		if o.Direction&3 != 0 {
 			// reverse measurements for directions 0(North) and 4(South), as scenary measurements
 			// are oriented vertically by default
-			width,height = height,width
+			width, height = height, width
 		}
 		for dx := 0; dx < width; dx++ {
 			for dy := 0; dy < height; dy++ {
-				x,y := o.X()+dx,o.Y()+dy
+				x, y := o.X()+dx, o.Y()+dy
 				areaX := (2304 + x) % RegionSize
 				areaY := (1776 + y - (944 * ((y + 100) / 944))) % RegionSize
 				if data.Solid() {
@@ -611,7 +611,7 @@ func RemoveObject(o *Object) {
 	}
 }
 
-//ReplaceObject Replaces old with a new game object with all of the same characteristics, except it's ID set to newID.
+// ReplaceObject Replaces old with a new game object with all of the same characteristics, except it's ID set to newID.
 func ReplaceObject(old *Object, newID int) *Object {
 	RemoveObject(old)
 	object := NewObject(newID, int(old.Direction), old.X(), old.Y(), old.Boundary)
@@ -619,7 +619,7 @@ func ReplaceObject(old *Object, newID int) *Object {
 	return object
 }
 
-//GetAllObjects Returns a slice containing all objects in the game
+// GetAllObjects Returns a slice containing all objects in the game
 func GetAllObjects() (list []entity.Entity) {
 	regionLock.RLock()
 	defer regionLock.RUnlock()
@@ -631,12 +631,12 @@ func GetAllObjects() (list []entity.Entity) {
 				})
 			}
 		}
-			
+
 	}
 	return list
 }
 
-//GetObject If there is an object at these coordinates, returns it.  Otherwise, returns nil.
+// GetObject If there is an object at these coordinates, returns it.  Otherwise, returns nil.
 func GetObject(x, y int) *Object {
 	r := Region(x, y)
 	r.Objects.RLock()
@@ -652,7 +652,7 @@ func GetObject(x, y int) *Object {
 	return nil
 }
 
-//GetNpc Returns the NPC with the specified game index.
+// GetNpc Returns the NPC with the specified game index.
 func GetNpc(index int) *NPC {
 	m := Npcs.Get(index)
 	if m == nil {
@@ -661,7 +661,7 @@ func GetNpc(index int) *NPC {
 	return m.(*NPC)
 }
 
-//NpcNearest looks for the NPC with the given ID, that is the closest to the given coordinates
+// NpcNearest looks for the NPC with the given ID, that is the closest to the given coordinates
 // and then returns it.
 // Returns nil if it can not find an NPC to fit the given description.
 func NpcNearest(id, x, y int) *NPC {
@@ -685,7 +685,7 @@ func NpcNearest(id, x, y int) *NPC {
 	return npc
 }
 
-//NpcVisibleFrom looks for any NPC with the given ID, that is within a 16x16 square
+// NpcVisibleFrom looks for any NPC with the given ID, that is within a 16x16 square
 // surrounding the given coordinates, and then returns it.
 // Returns nil if it can not find an NPC to fit the given parameters.
 func NpcVisibleFrom(id, x, y int) *NPC {
@@ -708,22 +708,23 @@ func NpcVisibleFrom(id, x, y int) *NPC {
 }
 
 var regionLock = sync.RWMutex{}
-// 
+
+//
 // func init() {
-	// regionLock.Lock()
-	// defer regionLock.Unlock()
-// 
-	// for x := 0; x < MaxX/RegionSize+1; x += 1 {
-		// for y := 0; y < MaxY/RegionSize+1; y += 1 {
-			// regions[x][y] = &region{x*RegionSize, y*RegionSize, NewMobList(), NewMobList(), &entityList{}, &entityList{}}
-		// }
-	// }
+// regionLock.Lock()
+// defer regionLock.Unlock()
+//
+// for x := 0; x < MaxX/RegionSize+1; x += 1 {
+// for y := 0; y < MaxY/RegionSize+1; y += 1 {
+// regions[x][y] = &region{x*RegionSize, y*RegionSize, NewMobList(), NewMobList(), &entityList{}, &entityList{}}
+// }
+// }
 // }
 
 // internal function to get a region by its row amd column indexes
 func get(x, y int) *region {
-	x = int(math.Min(math.Max(0, float64(x/RegionSize)), HorizontalPlanes - 1))
-	y = int(math.Min(math.Max(0, float64(y/RegionSize)), VerticalPlanes - 1))
+	x = int(math.Min(math.Max(0, float64(x/RegionSize)), HorizontalPlanes-1))
+	y = int(math.Min(math.Max(0, float64(y/RegionSize)), VerticalPlanes-1))
 	regionLock.Lock()
 	defer regionLock.Unlock()
 	if regions[x][y] == nil {
@@ -732,12 +733,12 @@ func get(x, y int) *region {
 	return regions[x][y]
 }
 
-//Region Returns the region that corresponds with the given coordinates.  If it does not exist yet, it will allocate a new onr and store it for the lifetime of the application in the regions map.
+// Region Returns the region that corresponds with the given coordinates.  If it does not exist yet, it will allocate a new onr and store it for the lifetime of the application in the regions map.
 func Region(x, y int) *region {
 	return get(x, y)
 }
 
-//VisibleRegions Returns the regions surrounding the given coordinates.
+// VisibleRegions Returns the regions surrounding the given coordinates.
 func VisibleRegions(x, y int) (regions [4]*region) {
 	regionX, regionY := x, y
 	regions[0] = get(regionX, regionY)
@@ -745,26 +746,26 @@ func VisibleRegions(x, y int) (regions [4]*region) {
 	regions[2] = get(regionX, regionY+RegionSize)
 	regions[3] = get(regionX+RegionSize, regionY+RegionSize)
 	// if x % RegionSize <= LowerBound {
-		// regionX -= RegionSize
+	// regionX -= RegionSize
 	// } else {
-		// regionX += RegionSize
+	// regionX += RegionSize
 	// }
 	// regions[1] = get(regionX, regionY)
 	// regions[2] = get(x, regionY)
 	// if y % RegionSize <= LowerBound {
-		// regionY -= RegionSize+(RegionSize/2)
+	// regionY -= RegionSize+(RegionSize/2)
 	// } else {
-		// regionY += RegionSize+(RegionSize/2)
+	// regionY += RegionSize+(RegionSize/2)
 	// }
 	// regions[3] = get(regionX, regionY)
-	
+
 	return
 }
 func VisibleRegionsFrom(l entity.Location) (regions [4]*region) {
 	return VisibleRegions(l.X(), l.Y())
 }
 
-//BoundedChance is a statistically random function that should return true percent/maxPercent% of the time.
+// BoundedChance is a statistically random function that should return true percent/maxPercent% of the time.
 // This should return true approximately percent/maxPercent of the time, and false (maxPercent-percent)/maxPercent of
 // the time.
 // percent defines the percentage of chance for this check to pass, clamped to the provided boundaries.
@@ -784,24 +785,24 @@ func BoundedChance(percent float64, minPercent, maxPercent float64) bool {
 	return ChanceByte(int(threshold))
 }
 
-//ChanceByte Grabs a single 8-bit unsigned byte out of the rscgo/rand pkg, and returns true if it's less than or equals the provided threshold.
+// ChanceByte Grabs a single 8-bit unsigned byte out of the rscgo/rand pkg, and returns true if it's less than or equals the provided threshold.
 func ChanceByte(threshold int) bool {
 	return rscRand.Byte() <= uint8(threshold)
 }
 
-//Chance should return true (percent)% of the time, and false (100-percent)% of the time.
+// Chance should return true (percent)% of the time, and false (100-percent)% of the time.
 // It uses ISAAC64+ to provide randomness.
 //
 // percent defines the percentage of chance for this check to pass.
 func Chance(percent float64) bool {
-	return ChanceByte(int(percent/100.0*256.0))
+	return ChanceByte(int(percent / 100.0 * 256.0))
 	// return BoundedChance(percent, 0.0, 100.0)
 }
 
-//probWeights
+// probWeights
 type IntProbabilitys = map[int]float64
 
-//Statistical
+// Statistical
 func Statistical(rng *isaac.ISAAC, options IntProbabilitys) int {
 	if rng == nil {
 		rng = rscRand.Rng
@@ -824,7 +825,7 @@ func Statistical(rng *isaac.ISAAC, options IntProbabilitys) int {
 	return -1
 }
 
-//WeightedChoice Awesome API call takes map[retVal]probability as input and returns a statistically weighted randomized retVal as output.
+// WeightedChoice Awesome API call takes map[retVal]probability as input and returns a statistically weighted randomized retVal as output.
 //
 // The input's mapped value assigned to each key is its return probability, out of the total sum of all return probabilities.
 // You can determine the percentage chance of any given input entry being returned by: probability/sumOfAllProbabilities*100

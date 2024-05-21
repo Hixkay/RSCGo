@@ -1,4 +1,3 @@
- 
 /*
  * Copyright (c) 2020 Zachariah Knight <aeros.storkpk@gmail.com>
  *
@@ -12,22 +11,23 @@ package tasks
 
 import (
 	"context"
+	"reflect"
 	"sync"
 	"time"
-	"reflect"
-	
+
 	"go.uber.org/atomic"
 
-	`github.com/spkaeros/rscgo/pkg/game/entity`
-	`github.com/spkaeros/rscgo/pkg/log`
+	"github.com/spkaeros/rscgo/pkg/game/entity"
+	"github.com/spkaeros/rscgo/pkg/log"
 )
 
 // tickable script procedure
 type (
 	//scriptCall This is a type-free box type, made for boxing function pointers usually from an Anko script.
-	ScriptCall interface{}
+	//ScriptCall interface{}
+	ScriptCall any
 	//scriptArg This is a type-free box type, made for boxing any function arguments, for use in conjunction with scriptCall.
-	scriptArg interface{}
+	scriptArg any
 	//scriptArg A slice of ScriptCalls.
 	ScriptCalls []ScriptCall
 	//Scripts A locked slice of ScriptCalls.
@@ -39,11 +39,11 @@ type (
 
 // Call function type aliases for tickables etc
 type (
-	call = func()
-	StatusReturnCall = func() bool
-	dualReturnCall = func(context.Context) (reflect.Value,reflect.Value)
-	singleArgDualReturnCall = func(context.Context, reflect.Value) (reflect.Value,reflect.Value)
-	playerArgCall = func(player entity.MobileEntity)
+	call                      = func()
+	StatusReturnCall          = func() bool
+	dualReturnCall            = func(context.Context) (reflect.Value, reflect.Value)
+	singleArgDualReturnCall   = func(context.Context, reflect.Value) (reflect.Value, reflect.Value)
+	playerArgCall             = func(player entity.MobileEntity)
 	playerArgStatusReturnCall = func(player entity.MobileEntity) bool
 )
 
@@ -58,10 +58,10 @@ func CurrentTick() tickCount {
 }
 
 func (t tickCount) since(t1 tickCount) tickCount {
-	return t-t1
+	return t - t1
 }
 
-//TickList A collection of Tasks that are intended to be ran once per game engine tick.
+// TickList A collection of Tasks that are intended to be ran once per game engine tick.
 // Tasks should contractually return either true if they are to be removed after execution completes,
 // or false if they are to be ran again on the next engine cycle.
 var TickList = &Scripts{}
@@ -70,12 +70,12 @@ func Schedule(ticks int, call StatusReturnCall) {
 	TickList.Schedule(ticks, call)
 }
 
-//DoOnceSync Run a task one time, and then remove it, regardless of the return value of the call.
+// DoOnceSync Run a task one time, and then remove it, regardless of the return value of the call.
 func DoOnceSync(ticks int, fn ScriptCall) {
 	c := make(chan struct{})
 	start := CurrentTick()
 	var ticker = func() bool {
-		if CurrentTick().since(start) >= tickCount(ticks)  {
+		if CurrentTick().since(start) >= tickCount(ticks) {
 			defer close(c)
 			switch fn.(type) {
 			case call:
@@ -105,7 +105,7 @@ func DoOnceSync(ticks int, fn ScriptCall) {
 func DoOnce(ticks int, fn ScriptCall) {
 	start := CurrentTick()
 	var ticker = func() bool {
-		if CurrentTick().since(start) >= tickCount(ticks)  {
+		if CurrentTick().since(start) >= tickCount(ticks) {
 			switch fn.(type) {
 			case call:
 				fn.(call)()
@@ -134,7 +134,7 @@ func Stall(ticks int) {
 	c := make(chan struct{})
 	startTick := CurrentTick()
 	ticker := func() bool {
-		if CurrentTick().since(startTick) >= tickCount(ticks)  {
+		if CurrentTick().since(startTick) >= tickCount(ticks) {
 			close(c)
 			return true
 		}
@@ -150,11 +150,11 @@ func (s *Scripts) Schedule(ticks int, fn ScriptCall) {
 	// startTick := CurrentTick()
 	// var ticker func() bool
 	// ticker = func() bool {
-		// if CurrentTick().since(startTick) >= tickCount(ticks)  {
-			// startTick = CurrentTick()
-			// return fn()
-		// }
-		// return false
+	// if CurrentTick().since(startTick) >= tickCount(ticks)  {
+	// startTick = CurrentTick()
+	// return fn()
+	// }
+	// return false
 	// }
 	// s.Lock()
 	// s.ScriptCalls = append(s.ScriptCalls, ticker)
@@ -163,7 +163,7 @@ func (s *Scripts) Schedule(ticks int, fn ScriptCall) {
 	start := CurrentTick()
 	s.Lock()
 	s.ScriptCalls = append(s.ScriptCalls, func() bool {
-		if CurrentTick().since(start) >= tickCount(ticks)  {
+		if CurrentTick().since(start) >= tickCount(ticks) {
 			start = CurrentTick()
 			switch fn.(type) {
 			case call:
@@ -199,7 +199,6 @@ func Do(fn interface{}) {
 	TickList.Add(fn)
 }
 
-
 func (s *Scripts) Tick(ctx context.Context) {
 	// s.ForEach(nil)
 	s.ForEach(ctx, nil)
@@ -233,7 +232,7 @@ func (s *Scripts) ForEach(ctx context.Context, arg interface{}) {
 				case playerArgCall:
 					script.(playerArgCall)(arg.(entity.MobileEntity))
 				// A function call returning its active status.
-				case StatusReturnCall: 
+				case StatusReturnCall:
 					if script.(StatusReturnCall)() {
 						list = list[:len(list)-1]
 					}
@@ -270,8 +269,8 @@ func (s *Scripts) ForEach(ctx context.Context, arg interface{}) {
 				default:
 					log.Debugf("Couldn't run task[%v]: Type '%T' not handled.", script, script)
 				}
+			}
 		}
-	}
 		close(done)
 	}(tickCtx)
 	s.RUnlock()

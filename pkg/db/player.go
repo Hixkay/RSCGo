@@ -16,7 +16,7 @@ import (
 	"github.com/spkaeros/rscgo/pkg/strutil"
 )
 
-//PlayerService An interface for manipulating player save data.
+// PlayerService An interface for manipulating player save data.
 type PlayerService interface {
 	PlayerCreate(string, string, string) bool
 	PlayerNameExists(username string) bool
@@ -29,7 +29,7 @@ type PlayerService interface {
 	OnlineCount() int
 }
 
-//NewPlayerServiceSql Returns a new SqlPlayerService to manage the specified *sql.DB instance, configured against
+// NewPlayerServiceSql Returns a new SqlPlayerService to manage the specified *sql.DB instance, configured against
 // the default players database.
 func NewPlayerServiceSql() PlayerService {
 	s := newSqlService(config.PlayerDriver())
@@ -37,14 +37,14 @@ func NewPlayerServiceSql() PlayerService {
 	return dbConn
 }
 
-//DefaultPlayerService the default player save managing service in use by the game server
+// DefaultPlayerService the default player save managing service in use by the game server
 // Currently using an sqlService.
 var DefaultPlayerService PlayerService
 
-//PlayerCreate Creates a new entry in the player SQLite3 database with the specified credentials.
+// PlayerCreate Creates a new entry in the player SQLite3 database with the specified credentials.
 // Returns true if successful, otherwise returns false.
 func (s *sqlService) PlayerCreate(username, password, ip string) bool {
-	db := s.connect(context.Background())
+	db := s.connect(context.Background(), config.PlayerDB())
 	// defer db.Close()
 	tx, err := db.BeginTx(context.Background(), nil)
 	if err != nil {
@@ -60,7 +60,7 @@ func (s *sqlService) PlayerCreate(username, password, ip string) bool {
 			return false
 		}
 		pID, err := stmt.LastInsertId()
-		if err != nil || playerID < 0 {
+		if err != nil || pID < 0 {
 			tx.Rollback()
 			log.Info.Printf("PlayerCreate(): Could not retrieve player database ID(%d):\n%v", playerID, err)
 			return false
@@ -115,9 +115,9 @@ func (s *sqlService) PlayerCreate(username, password, ip string) bool {
 	return true
 }
 
-//PlayerNameExists Returns true if there is a player with the name 'username' in the player database, otherwise returns false.
+// PlayerNameExists Returns true if there is a player with the name 'username' in the player database, otherwise returns false.
 func (s *sqlService) PlayerNameExists(username string) bool {
-	database := s.connect(context.Background())
+	database := s.connect(context.Background(), config.PlayerDB())
 	// defer database.Close()
 	stmt, err := database.QueryContext(context.Background(), "SELECT id FROM player WHERE userhash=$1", strutil.Base37.Encode(username))
 	if err != nil {
@@ -129,9 +129,9 @@ func (s *sqlService) PlayerNameExists(username string) bool {
 	return stmt.Next()
 }
 
-//OnlineCount Returns number of online players total.
+// OnlineCount Returns number of online players total.
 func (s *sqlService) OnlineCount() int {
-	database := s.connect(context.Background())
+	database := s.connect(context.Background(), config.PlayerDB())
 	// defer database.Close()
 	stmt, err := database.QueryContext(context.Background(), "SELECT COUNT(id) FROM player WHERE loggedIn=TRUE")
 	if err != nil {
@@ -151,7 +151,7 @@ func (s *sqlService) OnlineCount() int {
 }
 
 func (s *sqlService) PlayerUpdateStatus(id int, in bool) {
-	database := s.connect(context.Background())
+	database := s.connect(context.Background(), config.PlayerDB())
 	result, err := database.ExecContext(context.Background(), "UPDATE player SET loggedIn=$1 WHERE id=$2", in, id)
 	if err != nil {
 		log.Info.Println("Load error: Could not prepare statement:", err)
@@ -165,9 +165,9 @@ func (s *sqlService) PlayerUpdateStatus(id int, in bool) {
 	return
 }
 
-//PlayerValidLogin Returns true if it finds a user with this username hash and password in the database, otherwise returns false
+// PlayerValidLogin Returns true if it finds a user with this username hash and password in the database, otherwise returns false
 func (s *sqlService) PlayerValidLogin(userHash uint64, password string) bool {
-	database := s.connect(context.Background())
+	database := s.connect(context.Background(), config.PlayerDB())
 	// defer database.Close()
 	rows, err := database.QueryContext(context.Background(), "SELECT id FROM player WHERE userhash=$1 AND password=$2", userHash, password)
 	if err != nil {
@@ -178,9 +178,9 @@ func (s *sqlService) PlayerValidLogin(userHash uint64, password string) bool {
 	return rows.Next()
 }
 
-//PlayerChangePassword Updates the players password to password in the database.
+// PlayerChangePassword Updates the players password to password in the database.
 func (s *sqlService) PlayerChangePassword(userHash uint64, password string) bool {
-	database := s.connect(context.Background())
+	database := s.connect(context.Background(), config.PlayerDB())
 	// defer database.Close()
 	stmt, err := database.ExecContext(context.Background(), "UPDATE player SET password=$1 WHERE userhash=$2", password, userHash)
 	if err != nil {
@@ -195,9 +195,9 @@ func (s *sqlService) PlayerChangePassword(userHash uint64, password string) bool
 	return true
 }
 
-//PlayerHasRecoverys Returns true if this username has recovery questions assigned to it, otherwise returns false.
+// PlayerHasRecoverys Returns true if this username has recovery questions assigned to it, otherwise returns false.
 func (s *sqlService) PlayerHasRecoverys(userHash uint64) bool {
-	database := s.connect(context.Background())
+	database := s.connect(context.Background(), config.PlayerDB())
 	// defer database.Close()
 	rows, err := database.QueryContext(context.Background(), "SELECT question1 FROM recovery_questions WHERE userhash=$1", userHash)
 	if err != nil {
@@ -208,9 +208,9 @@ func (s *sqlService) PlayerHasRecoverys(userHash uint64) bool {
 	return rows.Next()
 }
 
-//PlayerLoadRecoverys Retrieves the recovery questions assigned to this username if any, otherwise returns nil
+// PlayerLoadRecoverys Retrieves the recovery questions assigned to this username if any, otherwise returns nil
 func (s *sqlService) PlayerLoadRecoverys(userHash uint64) []string {
-	database := s.connect(context.Background())
+	database := s.connect(context.Background(), config.PlayerDB())
 	// defer database.Close()
 	rows, err := database.QueryContext(context.Background(), "SELECT question1, question2, question3, question4, question5 FROM recovery_questions WHERE userhash=$1", userHash)
 	if err != nil {
@@ -232,16 +232,16 @@ func (s *sqlService) PlayerLoadRecoverys(userHash uint64) []string {
 	return nil
 }
 
-//SaveRecoveryQuestions Saves new recovery questions to the database.
+// SaveRecoveryQuestions Saves new recovery questions to the database.
 func (s *sqlService) SaveRecoveryQuestions(userHash uint64, questions []string, answers []uint64) {
 
 }
 
-//PlayerLoad Loads a player from the SQLite3 database, returns a login response code.
+// PlayerLoad Loads a player from the SQLite3 database, returns a login response code.
 // Returns: true on success, false on failure
 func (s *sqlService) PlayerLoad(player *world.Player) bool {
 	loadProfile := func() error {
-		database := s.connect(context.Background())
+		database := s.connect(context.Background(), config.PlayerDB())
 		// defer database.Close()
 		rows, err := database.QueryContext(context.Background(), "SELECT player.id, player.x, player.y, player.group_id, appearance.haircolour, appearance.topcolour, appearance.trousercolour, appearance.skincolour, appearance.head, appearance.body FROM player INNER JOIN appearance ON appearance.playerid=player.id AND player.userhash=$1", player.UsernameHash())
 		if err != nil {
@@ -262,7 +262,7 @@ func (s *sqlService) PlayerLoad(player *world.Player) bool {
 		return nil
 	}
 	loadAttributes := func() error {
-		database := s.connect(context.Background())
+		database := s.connect(context.Background(), config.PlayerDB())
 		// defer database.Close()
 
 		rows, err := database.QueryContext(context.Background(), "SELECT name, value FROM player_attr WHERE player_id=$1", player.DatabaseIndex)
@@ -319,7 +319,7 @@ func (s *sqlService) PlayerLoad(player *world.Player) bool {
 		return nil
 	}
 	loadContactList := func(list string) error {
-		database := s.connect(context.Background())
+		database := s.connect(context.Background(), config.PlayerDB())
 		// defer database.Close()
 
 		rows, err := database.QueryContext(context.Background(), "SELECT playerhash FROM contacts WHERE playerid=$1 AND type=$2", player.DatabaseIndex, list)
@@ -345,7 +345,7 @@ func (s *sqlService) PlayerLoad(player *world.Player) bool {
 		return nil
 	}
 	loadInventory := func() error {
-		database := s.connect(context.Background())
+		database := s.connect(context.Background(), config.PlayerDB())
 		// defer database.Close()
 		rows, err := database.QueryContext(context.Background(), "SELECT itemid, amount, wielded FROM inventory WHERE playerid=$1", player.DatabaseIndex)
 		if err != nil {
@@ -372,7 +372,7 @@ func (s *sqlService) PlayerLoad(player *world.Player) bool {
 		return nil
 	}
 	loadBank := func() error {
-		database := s.connect(context.Background())
+		database := s.connect(context.Background(), config.PlayerDB())
 		// defer database.Close()
 		rows, err := database.QueryContext(context.Background(), "SELECT itemid, amount FROM bank WHERE playerid=$1", player.DatabaseIndex)
 		if err != nil {
@@ -388,7 +388,7 @@ func (s *sqlService) PlayerLoad(player *world.Player) bool {
 		return nil
 	}
 	loadStats := func() error {
-		database := s.connect(context.Background())
+		database := s.connect(context.Background(), config.PlayerDB())
 		// defer database.Close()
 		rows, err := database.QueryContext(context.Background(), "SELECT cur, exp FROM stats WHERE playerid=$1 ORDER BY num", player.DatabaseIndex)
 		if err != nil {
@@ -434,9 +434,9 @@ func (s *sqlService) PlayerLoad(player *world.Player) bool {
 	return true
 }
 
-//PlayerSave Saves a player to the SQLite3 database.
+// PlayerSave Saves a player to the SQLite3 database.
 func (s *sqlService) PlayerSave(player *world.Player) {
-	db := s.connect(context.Background())
+	db := s.connect(context.Background(), config.PlayerDB())
 	// defer db.Close()
 	tx, err := db.BeginTx(context.Background(), nil)
 	if err != nil {

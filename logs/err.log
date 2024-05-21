@@ -1,0 +1,10 @@
+[WARNING] 02:04:18 entity.go:77: Couldn't load entity definitions from sqlService: no such table: tiles
+[WARNING] 02:04:18 entity.go:149: Couldn't load entity definitions from sqlService: no such table: npcs
+[WARNING] 02:04:18 entity.go:56: Couldn't load entity definitions from sqlService: no such table: boundarys
+[WARNING] 02:04:18 entity.go:100: Couldn't load entity definitions from sqlService: no such table: items
+[WARNING] 02:04:18 entity.go:35: Couldn't load entity definitions from sqlService: no such table: game_objects
+[WARNING] 02:04:26 entity.go:149: Couldn't load entity definitions from sqlService: no such table: npcs
+[WARNING] 02:04:26 entity.go:35: Couldn't load entity definitions from sqlService: no such table: game_objects
+[WARNING] 02:04:26 entity.go:77: Couldn't load entity definitions from sqlService: no such table: tiles
+[WARNING] 02:04:26 entity.go:56: Couldn't load entity definitions from sqlService: no such table: boundarys
+[WARNING] 02:04:26 entity.go:100: Couldn't load entity definitions from sqlService: no such table: items

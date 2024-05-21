@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"sync"
 
-	"github.com/spkaeros/rscgo/pkg/config"
 	"github.com/spkaeros/rscgo/pkg/log"
 
 	// Necessary for sqlite3 driver
@@ -14,7 +13,7 @@ import (
 	_ "github.com/lib/pq"
 )
 
-//sqlOpen Attempts to connect to the specified address as a database/sql database.
+// sqlOpen Attempts to connect to the specified address as a database/sql database.
 // Returns: upon success, a connected *sql.DB instance accessing the specified SQL
 // database, and nil
 // upon failure, nil and a meaningful error.
@@ -33,7 +32,7 @@ func (s *sqlService) sqlOpen(addr string) *sql.DB {
 	return database
 }
 
-//sqlService A database/sql based persistence service.
+// sqlService A database/sql based persistence service.
 // Implements PlayerService interface and sqlService.
 type sqlService struct {
 	database *sql.DB
@@ -43,7 +42,7 @@ type sqlService struct {
 	sync.RWMutex
 }
 
-//newSqlService returns a new sqlService instance attached to the provided *sql.DB
+// newSqlService returns a new sqlService instance attached to the provided *sql.DB
 // To obtain a valid *sql.DB, load a database/sql driver and call sqlOpen(driverName, connectAddress string) *sql.DB
 func newSqlService(driver string) *sqlService {
 	return &sqlService{
@@ -53,12 +52,12 @@ func newSqlService(driver string) *sqlService {
 
 var dbConn *sqlService
 
-//connect returns a connection to the services underlying *sql.DB instance upon successful
+// connect returns a connection to the services underlying *sql.DB instance upon successful
 // connection.  If an error occurs, returns nil.
-func (s *sqlService) connect(ctx context.Context) *sql.Conn {
+func (s *sqlService) connect(ctx context.Context, addr string) *sql.Conn {
 	if dbConn == nil {
-		dbConn = newSqlService(config.PlayerDriver())
-		db := dbConn.sqlOpen(config.PlayerDB())
+		dbConn = newSqlService(s.Driver)
+		db := dbConn.sqlOpen(addr)
 		dbConn.database = db
 		c, err := db.Conn(ctx)
 		if err != nil {

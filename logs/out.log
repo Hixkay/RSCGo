@@ -1,0 +1,153 @@
+[INFO] 20:33:35 server.go:392: Error encountered: tls: failed to find any PEM data in certificate input
+[INFO] 00:02:55 server.go:392: Error encountered: tls: failed to find any PEM data in certificate input
+[INFO] 00:07:28 server.go:392: Error encountered: tls: failed to find any PEM data in certificate input
+[INFO] 00:07:34 server.go:100: Error loading certificate: tls: failed to find any PEM data in certificate input
+[INFO] 00:08:36 server.go:100: Error loading certificate: tls: failed to find any PEM data in certificate input
+[INFO] 00:11:06 server.go:100: Error loading certificate: tls: failed to find any PEM data in certificate input
+[INFO] 02:04:18 server.go:100: Error loading certificate: tls: failed to find any PEM data in certificate input
+[INFO] 02:04:19 server.go:208: Listening at TCP port 43594
+[INFO] 02:04:19 server.go:209: 
+[INFO] 02:04:19 server.go:210: RSCGo has finished initializing world; we hope you enjoy it
+[INFO] 02:04:26 server.go:100: Error loading certificate: tls: failed to find any PEM data in certificate input
+[INFO] 02:04:26 server.go:188: Loaded collision data from 335 map sectors
+[INFO] 02:04:26 server.go:189: Loaded 0 tile types
+[INFO] 02:04:26 server.go:190: Loaded 22 packet types, with handlers for 0 of them
+[INFO] 02:04:26 server.go:191: Loaded 961 items and 0 item types
+[INFO] 02:04:26 server.go:192: Loaded 3594 NPCs and 0 NPC types
+[INFO] 02:04:26 server.go:201: Loaded 26809 scenary objects, and 0 scenary types.
+[INFO] 02:04:26 server.go:202: Loaded 946 boundary objects, and 0 boundary types
+[INFO] 02:04:26 server.go:203: Loading all game entitys took: 0.605146557 seconds
+[INFO] 02:04:26 server.go:205: Triggers[
+	3 item actions,
+	8 scenary actions,
+	2 boundary actions,
+	23 npc actions,
+	1 item->boundary actions,
+	1 item->scenary actions,
+	1 attacking NPC actions,
+	1 killing NPC actions
+];
+[INFO] 02:04:26 server.go:208: Listening at TCP port 43594
+[INFO] 02:04:26 server.go:209: 
+[INFO] 02:04:26 server.go:210: RSCGo has finished initializing world; we hope you enjoy it
+[INFO] 02:12:16 server.go:100: Error loading certificate: tls: failed to find any PEM data in certificate input
+[INFO] 02:12:17 server.go:188: Loaded collision data from 335 map sectors
+[INFO] 02:12:17 server.go:189: Loaded 25 tile types
+[INFO] 02:12:17 server.go:190: Loaded 22 packet types, with handlers for 0 of them
+[INFO] 02:12:17 server.go:191: Loaded 961 items and 1290 item types
+[INFO] 02:12:17 server.go:192: Loaded 3594 NPCs and 794 NPC types
+[INFO] 02:12:17 server.go:201: Loaded 26809 scenary objects, and 1189 scenary types.
+[INFO] 02:12:17 server.go:202: Loaded 946 boundary objects, and 214 boundary types
+[INFO] 02:12:17 server.go:203: Loading all game entitys took: 1.542720264 seconds
+[INFO] 02:12:17 server.go:205: Triggers[
+	3 item actions,
+	8 scenary actions,
+	2 boundary actions,
+	23 npc actions,
+	1 item->boundary actions,
+	1 item->scenary actions,
+	1 attacking NPC actions,
+	1 killing NPC actions
+];
+[INFO] 02:12:17 server.go:208: Listening at TCP port 43594
+[INFO] 02:12:17 server.go:209: 
+[INFO] 02:12:17 server.go:210: RSCGo has finished initializing world; we hope you enjoy it
+[INFO] 03:56:39 server.go:100: Error loading certificate: tls: failed to find any PEM data in certificate input
+[INFO] 03:56:41 server.go:208: Listening at TCP port 43594
+[INFO] 03:56:41 server.go:209: 
+[INFO] 03:56:41 server.go:210: RSCGo has finished initializing world; we hope you enjoy it
+[INFO] 03:56:45 server.go:100: Error loading certificate: tls: failed to find any PEM data in certificate input
+[INFO] 03:56:46 server.go:188: Loaded collision data from 335 map sectors
+[INFO] 03:56:46 server.go:189: Loaded 25 tile types
+[INFO] 03:56:46 server.go:190: Loaded 22 packet types, with handlers for 0 of them
+[INFO] 03:56:46 server.go:191: Loaded 961 items and 1290 item types
+[INFO] 03:56:46 server.go:192: Loaded 3594 NPCs and 794 NPC types
+[INFO] 03:56:46 server.go:201: Loaded 26809 scenary objects, and 1189 scenary types.
+[INFO] 03:56:46 server.go:202: Loaded 946 boundary objects, and 214 boundary types
+[INFO] 03:56:46 server.go:203: Loading all game entitys took: 1.07872752 seconds
+[INFO] 03:56:46 server.go:205: Triggers[
+	3 item actions,
+	8 scenary actions,
+	2 boundary actions,
+	23 npc actions,
+	1 item->boundary actions,
+	1 item->scenary actions,
+	1 attacking NPC actions,
+	1 killing NPC actions
+];
+[INFO] 03:56:46 server.go:208: Listening at TCP port 43594
+[INFO] 03:56:46 server.go:209: 
+[INFO] 03:56:46 server.go:210: RSCGo has finished initializing world; we hope you enjoy it
+[INFO] 20:38:19 server.go:100: Error loading certificate: tls: failed to find any PEM data in certificate input
+[INFO] 20:38:21 server.go:208: Listening at TCP port 43594
+[INFO] 20:38:21 server.go:209: 
+[INFO] 20:38:21 server.go:210: RSCGo has finished initializing world; we hope you enjoy it
+[INFO] 20:38:21 server.go:401: Error encountered: listen tcp :43595: bind: address already in use
+[INFO] 20:38:29 server.go:100: Error loading certificate: tls: failed to find any PEM data in certificate input
+[INFO] 20:38:31 server.go:188: Loaded collision data from 335 map sectors
+[INFO] 20:38:31 server.go:189: Loaded 25 tile types
+[INFO] 20:38:31 server.go:190: Loaded 22 packet types, with handlers for 0 of them
+[INFO] 20:38:31 server.go:191: Loaded 961 items and 1290 item types
+[INFO] 20:38:31 server.go:192: Loaded 3594 NPCs and 794 NPC types
+[INFO] 20:38:31 server.go:201: Loaded 26809 scenary objects, and 1189 scenary types.
+[INFO] 20:38:31 server.go:202: Loaded 946 boundary objects, and 214 boundary types
+[INFO] 20:38:31 server.go:203: Loading all game entitys took: 1.538097593 seconds
+[INFO] 20:38:31 server.go:205: Triggers[
+	3 item actions,
+	8 scenary actions,
+	2 boundary actions,
+	23 npc actions,
+	1 item->boundary actions,
+	1 item->scenary actions,
+	1 attacking NPC actions,
+	1 killing NPC actions
+];
+[INFO] 20:38:31 server.go:208: Listening at TCP port 43594
+[INFO] 20:38:31 server.go:209: 
+[INFO] 20:38:31 server.go:210: RSCGo has finished initializing world; we hope you enjoy it
+[INFO] 20:38:31 server.go:401: Error encountered: listen tcp :43595: bind: address already in use
+[INFO] 20:38:57 server.go:100: Error loading certificate: tls: failed to find any PEM data in certificate input
+[INFO] 20:38:58 server.go:188: Loaded collision data from 335 map sectors
+[INFO] 20:38:58 server.go:189: Loaded 25 tile types
+[INFO] 20:38:58 server.go:190: Loaded 22 packet types, with handlers for 0 of them
+[INFO] 20:38:58 server.go:191: Loaded 961 items and 1290 item types
+[INFO] 20:38:58 server.go:192: Loaded 3594 NPCs and 794 NPC types
+[INFO] 20:38:58 server.go:201: Loaded 26809 scenary objects, and 1189 scenary types.
+[INFO] 20:38:58 server.go:202: Loaded 946 boundary objects, and 214 boundary types
+[INFO] 20:38:58 server.go:203: Loading all game entitys took: 1.341286133 seconds
+[INFO] 20:38:58 server.go:205: Triggers[
+	3 item actions,
+	8 scenary actions,
+	2 boundary actions,
+	23 npc actions,
+	1 item->boundary actions,
+	1 item->scenary actions,
+	1 attacking NPC actions,
+	1 killing NPC actions
+];
+[INFO] 20:38:58 server.go:208: Listening at TCP port 43594
+[INFO] 20:38:58 server.go:209: 
+[INFO] 20:38:58 server.go:210: RSCGo has finished initializing world; we hope you enjoy it
+[INFO] 20:38:58 server.go:401: Error encountered: listen tcp :43595: bind: address already in use
+[INFO] 20:39:15 server.go:100: Error loading certificate: tls: failed to find any PEM data in certificate input
+[INFO] 20:39:16 server.go:188: Loaded collision data from 335 map sectors
+[INFO] 20:39:16 server.go:189: Loaded 25 tile types
+[INFO] 20:39:16 server.go:190: Loaded 22 packet types, with handlers for 0 of them
+[INFO] 20:39:16 server.go:191: Loaded 961 items and 1290 item types
+[INFO] 20:39:16 server.go:192: Loaded 3594 NPCs and 794 NPC types
+[INFO] 20:39:16 server.go:201: Loaded 26809 scenary objects, and 1189 scenary types.
+[INFO] 20:39:16 server.go:202: Loaded 946 boundary objects, and 214 boundary types
+[INFO] 20:39:16 server.go:203: Loading all game entitys took: 1.455321162 seconds
+[INFO] 20:39:16 server.go:205: Triggers[
+	3 item actions,
+	8 scenary actions,
+	2 boundary actions,
+	23 npc actions,
+	1 item->boundary actions,
+	1 item->scenary actions,
+	1 attacking NPC actions,
+	1 killing NPC actions
+];
+[INFO] 20:39:16 server.go:208: Listening at TCP port 43594
+[INFO] 20:39:16 server.go:209: 
+[INFO] 20:39:16 server.go:210: RSCGo has finished initializing world; we hope you enjoy it
